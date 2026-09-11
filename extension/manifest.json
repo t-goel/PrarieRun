@@ -9,8 +9,7 @@
   "host_permissions": ["https://us.prairielearn.com/*", "https://www.googleapis.com/*"],
   "content_scripts": [{
     "matches": ["https://us.prairielearn.com/*"],
-    "js": ["prairielearn-adapter.js", "home-panel.js", "content.js"],
-    "css": ["home-panel.css"],
+    "js": ["prairielearn-adapter.js", "content.js"],
     "run_at": "document_idle"
   }]
 }

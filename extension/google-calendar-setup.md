@@ -7,7 +7,7 @@ Stage 1's scan and staging workflow can be tested without Google OAuth. To enabl
 3. Configure the OAuth consent screen for the test account.
 4. Create a Chrome Extension OAuth client using the unpacked extension ID shown in `chrome://extensions`.
 5. Add the OAuth client ID and exact `chromiumapp.org` redirect URI to the extension's OAuth flow configuration.
-6. Reload the extension and test **Quick add selected** from the embedded PrairieLearn panel.
+6. Reload the extension and test **Add to Google Calendar** from the staging export preview.
 
 Required scope for the planned export flow:
 

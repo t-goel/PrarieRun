@@ -1,8 +1,4 @@
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === "PRAIRIERUN_HOME_SCAN_RESULT") {
-    window.PrairieRunHomePanel?.update(message.assignments || []);
-    return false;
-  }
   if (message?.type !== "PRAIRIERUN_READ_PAGE") return undefined;
   try {
     const adapter = window.PrairieLearnAdapter;
@@ -24,6 +20,5 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 if (window.PrairieLearnAdapter?.pageType(location.href, document.title) === "home") {
-  window.PrairieRunHomePanel?.mount();
   chrome.runtime.sendMessage({ type: "PRAIRIERUN_HOME_READY", url: location.href }).catch(() => undefined);
 }

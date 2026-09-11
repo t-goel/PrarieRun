@@ -1,5 +1,3 @@
-importScripts("calendar.js");
-
 const ASSIGNMENTS_KEY = "prairierunAssignments";
 const SYNC_KEY = "prairierunSyncStatus";
 const SETTINGS_KEY = "prairierunSettings";
@@ -108,20 +106,15 @@ async function startScan(sourceTabId) {
   return result;
 }
 
-async function notifyHomeTab(tabId, assignments, detectedIds, autoAdd) {
-  const settings = await getSettings();
-  let exportResults = [];
-  if (autoAdd && settings.autoAddToCalendar) {
-    const eligible = assignments.filter((item) => detectedIds.has(item.id) && ["new", "changed"].includes(item.syncState) && item.dueAtLocal);
-    if (eligible.length) exportResults = await PrairieRunCalendar.exportAssignments(eligible);
-    exportResults.forEach((result) => {
-      const item = assignments.find((entry) => entry.id === result.assignment.id);
-      if (item && ["added", "updated"].includes(result.status)) { item.syncState = "synced"; item.selected = false; }
-      if (item && result.status === "failed") { item.syncState = "error"; item.errorMessage = result.reason; item.selected = true; }
-    });
-    if (exportResults.length) await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments });
+async function openStagingArea(autoAdd = false) {
+  const stagingUrl = chrome.runtime.getURL("staging.html");
+  const existing = await chrome.tabs.query({ url: `${stagingUrl}*` });
+  if (existing[0]?.id) {
+    await chrome.tabs.update(existing[0].id, { active: true });
+    if (autoAdd) chrome.tabs.sendMessage(existing[0].id, { type: "PRAIRIERUN_AUTO_ADD" }).catch(() => undefined);
+    return;
   }
-  chrome.tabs.sendMessage(tabId, { type: "PRAIRIERUN_HOME_SCAN_RESULT", assignments, detectedIds: [...detectedIds], exportResults }).catch(() => undefined);
+  await chrome.tabs.create({ url: autoAdd ? `${stagingUrl}?auto=1` : stagingUrl, active: true });
 }
 
 async function runScan(sourceTabId, openWhenNew) {
@@ -131,7 +124,7 @@ async function runScan(sourceTabId, openWhenNew) {
     const scan = await startScan(sourceTabId);
     const assignments = scan.merged;
     const newOrChanged = assignments.filter((item) => scan.detectedIds.has(item.id));
-    await notifyHomeTab(sourceTabId, assignments, new Set(newOrChanged.map((item) => item.id)), openWhenNew);
+    if (openWhenNew && newOrChanged.length) await openStagingArea(true);
     return { assignments, newOrChanged };
   } finally {
     scanInFlight = false;
@@ -145,21 +138,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message?.type === "PRAIRIERUN_HOME_READY" && sender.tab?.id) {
     runScan(sender.tab.id, true).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); });
-    return true;
-  }
-  if (message?.type === "PRAIRIERUN_EXPORT_SELECTED" && sender.tab?.id) {
-    const selected = (message.assignments || []).filter((item) => ["new", "changed", "error"].includes(item.syncState) && item.dueAtLocal);
-    PrairieRunCalendar.exportAssignments(selected).then(async (results) => {
-      const stored = await chrome.storage.local.get(ASSIGNMENTS_KEY);
-      const current = stored[ASSIGNMENTS_KEY] || [];
-      results.forEach((result) => {
-        const item = current.find((entry) => entry.id === result.assignment.id);
-        if (item && ["added", "updated"].includes(result.status)) { item.syncState = "synced"; item.selected = false; }
-        if (item && result.status === "failed") { item.syncState = "error"; item.errorMessage = result.reason; item.selected = true; }
-      });
-      await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: current });
-      sendResponse({ ok: true, results, assignments: current });
-    }).catch((error) => sendResponse({ ok: false, error: error?.message || "Calendar export failed." }));
     return true;
   }
   if (message?.type === "PRAIRIERUN_GET_STATE") {

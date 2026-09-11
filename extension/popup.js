@@ -32,4 +32,5 @@ scanButton.addEventListener("click", () => {
   });
 });
 
+document.querySelector("#open-staging").addEventListener("click", () => chrome.tabs.create({ url: chrome.runtime.getURL("staging.html") }));
 refreshState();
