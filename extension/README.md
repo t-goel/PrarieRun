@@ -3,8 +3,8 @@
 ## Current functionality
 
 - Scans the logged-in `us.prairielearn.com` home page and discovered course assessment pages.
-- Automatically scans when the logged-in PrairieLearn home page is opened and opens the staging area when new or changed assignments are found.
-- Automatically adds actionable assignments to Google Calendar when staging is opened from a scan.
+- Automatically scans when the logged-in PrairieLearn home page is opened.
+- Automatically synchronizes actionable assignments to Google Calendar after each scan.
 - Extracts assignments, course names, scores, source URLs, due timestamps, and time zones.
 - Merges base assessments and numbered assessment instances.
 - Stores assignments locally in Chrome.

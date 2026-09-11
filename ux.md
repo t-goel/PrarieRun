@@ -89,7 +89,7 @@ Keep the initial staging view compact and low-clutter:
 
 - Show assignments grouped by course with a course total and sync summary.
 - Treat only new and changed assignments with due dates as eligible for synchronization by default.
-- Show one clear bulk action: **Sync assignments**.
+- Show automatic synchronization status.
 - Keep assignment details and per-assignment actions visible without per-assignment selection controls.
 - If there are missing dates or errors, show a concise warning count and let the user review those items without expanding every row. Missing-date assignments are excluded from the bulk action by default.
 
@@ -101,7 +101,7 @@ The assignment detail view shows the following:
 - Search and filters
 - New/changed/synced status indicators
 - Per-assignment edit, exclude, and source-link actions
-- **Sync assignments** as the primary action
+- Automatic synchronization status
 
 ### Assignment row/card
 
@@ -122,14 +122,14 @@ For changed or synced items, show a small status explanation rather than color a
 
 In the default bulk view, show only the essential actions:
 
-- **Sync assignments**
+- Automatic synchronization status
 
 In the assignment detail view, show:
 
 - **Set calendar**
 - **Set class calendar**
 - **Set reminder**
-- **Sync assignments**
+- Automatic synchronization status
 
 The default synchronization set should be “new and changed assignments with due dates.” A missing-date assignment can be edited in staging to add a due date/time; after saving, it becomes eligible. It remains excluded from synchronization until it has a valid due date.
 

@@ -9,9 +9,7 @@
 
   function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;"); }
   function dueLabel(item) { return item.dueAtLocal ? `${item.dueAtLocal}${item.timezone ? ` (${item.timezone})` : ""}` : "No due date"; }
-  function isActionable(item) { return PrairieRunView.isPending(item) && Boolean(item.dueAtLocal); }
   function visibleAssignments() { return assignments.filter((item) => PrairieRunView.displayable(item, settings.showUndatedAssignments)); }
-  function syncableAssignments() { return visibleAssignments().filter((item) => isActionable(item) && item.dueAtLocal); }
 
   function rowMarkup(item) {
     const status = PrairieRunView.statusLabel(item);
@@ -55,7 +53,6 @@
     panel.querySelector("#prr-show-undated").textContent = settings.showUndatedAssignments ? "Hide undated" : "Show undated";
     panel.querySelector(".prr-list").innerHTML = listMarkup();
     panel.querySelectorAll("button[data-edit-id]").forEach((button) => button.addEventListener("click", () => editDueDate(button.dataset.editId)));
-    updateSyncAction();
   }
 
   async function persist() { await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments }); render(); }
@@ -74,35 +71,6 @@
     await persist();
   }
 
-  function syncAssignments() {
-    const syncable = syncableAssignments();
-    if (!syncable.length) return;
-    const button = panel.querySelector("#prr-sync-action");
-    button.disabled = true; button.textContent = "Connecting…";
-    chrome.runtime.sendMessage({ type: "PRAIRIERUN_SYNC_ASSIGNMENTS", assignments: syncable }, (response) => {
-      button.textContent = "Sync assignments";
-      if (chrome.runtime.lastError || !response?.ok) { alert(response?.error || chrome.runtime.lastError?.message || "Calendar export failed."); render(); return; }
-      assignments = response.assignments || assignments;
-      render();
-      const results = response.results || [];
-      const added = results.filter((result) => result.status === "added").length;
-      const updated = results.filter((result) => result.status === "updated").length;
-      const failed = results.filter((result) => result.status === "failed");
-      alert(`Calendar sync complete: ${added} added, ${updated} updated, ${failed.length} failed.${failed.length ? `\n\n${failed.map((result) => `• ${result.assignment.title}: ${result.reason}`).join("\n")}` : ""}`);
-    });
-  }
-
-  function updateSyncAction() {
-    const button = panel.querySelector("#prr-sync-action");
-    const dated = visibleAssignments().filter((item) => item.dueAtLocal);
-    const allSynced = dated.length > 0 && dated.every((item) => item.syncState === "synced");
-    const syncable = syncableAssignments();
-    button.classList.toggle("prr-sync-action--synced", allSynced);
-    button.disabled = allSynced || !syncable.length;
-    button.textContent = allSynced ? "Synced" : syncable.length ? "Sync assignments" : "Needs sync";
-    button.setAttribute("aria-label", allSynced ? "All current assignments are synced" : "Sync assignments");
-  }
-
   function buildPanel() {
     const built = document.createElement("div");
     built.id = PANEL_ID;
@@ -111,12 +79,10 @@
       <span>PrairieRun <span class="prr-count"></span></span>
       <div class="prr-header-controls">
         <button type="button" class="btn btn-light btn-sm" id="prr-show-undated">Show undated</button>
-        <button type="button" class="btn btn-light btn-sm prr-sync-action" id="prr-sync-action" disabled>Needs sync</button>
       </div>
     </div>
     <ul class="list-group list-group-flush prr-list"></ul>`;
     built.querySelector("#prr-show-undated").addEventListener("click", async () => { settings.showUndatedAssignments = !settings.showUndatedAssignments; await chrome.storage.local.set({ [SETTINGS_KEY]: settings }); render(); });
-    built.querySelector("#prr-sync-action").addEventListener("click", () => syncAssignments());
     return built;
   }
 

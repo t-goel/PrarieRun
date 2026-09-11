@@ -60,7 +60,7 @@ scanButton.addEventListener("click", () => {
   console.log("[PrairieRun] Popup scan button clicked");
   scanButton.disabled = true; showStatus("Starting scan…");
   chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-    sendRuntimeMessage({ type: "PRAIRIERUN_START_SCAN", tabId: tab?.id, forceSync: true }, 45000).then((response) => {
+    sendRuntimeMessage({ type: "PRAIRIERUN_START_SCAN", tabId: tab?.id }, 45000).then((response) => {
       scanButton.disabled = false;
       if (!response?.ok) showStatus(response?.error || "Scan failed.", true);
       else showStatus(`Scan complete: ${response.count} assignments found.`);

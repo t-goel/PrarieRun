@@ -196,30 +196,27 @@ function applyExportResults(results, assignments) {
   });
 }
 
-async function notifyHomeTab(tabId, assignments, detectedIds, autoAdd, forceSync = false) {
-  const settings = await getSettings();
+async function notifyHomeTab(tabId, assignments, detectedIds) {
   let exportResults = [];
-  if (autoAdd || forceSync) {
-    const eligible = assignments.filter((item) => (forceSync || detectedIds.has(item.id)) && item.dueAtLocal && isCurrentAssignment(item));
-    if (eligible.length) {
-      debugLog("Reconciling Calendar assignments", { count: eligible.length, forceSync });
-      exportResults = await PrairieRunCalendar.exportAssignments(eligible);
-      applyExportResults(exportResults, assignments);
-      await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments });
-    }
+  const eligible = assignments.filter((item) => detectedIds.has(item.id) && item.dueAtLocal && isCurrentAssignment(item));
+  if (eligible.length) {
+    debugLog("Automatically synchronizing Calendar assignments", { count: eligible.length });
+    exportResults = await PrairieRunCalendar.exportAssignments(eligible);
+    applyExportResults(exportResults, assignments);
+    await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments });
   }
   chrome.tabs.sendMessage(tabId, { type: "PRAIRIERUN_HOME_SCAN_RESULT", assignments, exportResults }).catch(() => undefined);
 }
 
-async function runScan(sourceTabId, openWhenNew, forceSync = false) {
+async function runScan(sourceTabId, openWhenNew) {
   if (scanInFlight) { debugLog("Scan ignored because another scan is already running"); return { assignments: [], skipped: true }; }
   scanInFlight = true;
-  debugLog("Scan lock acquired", { sourceTabId, openWhenNew, forceSync });
+  debugLog("Scan lock acquired", { sourceTabId, openWhenNew });
   try {
     const scan = await startScan(sourceTabId);
     const assignments = scan.merged;
     const newOrChanged = assignments.filter((item) => scan.detectedIds.has(item.id));
-    await notifyHomeTab(sourceTabId, assignments, scan.detectedIds, openWhenNew, forceSync);
+    await notifyHomeTab(sourceTabId, assignments, scan.detectedIds);
     return { assignments, newOrChanged };
   } finally {
     scanInFlight = false;
@@ -229,29 +226,13 @@ async function runScan(sourceTabId, openWhenNew, forceSync = false) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "PRAIRIERUN_START_SCAN") {
-    debugLog("Popup requested scan", { tabId: message.tabId || sender.tab?.id, forceSync: message.forceSync === true });
-    runScan(message.tabId || sender.tab?.id, false, message.forceSync === true).then((result) => sendResponse({ ok: true, count: result.assignments.length })).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); sendResponse({ ok: false, error: error.message }); });
+    debugLog("Popup requested scan", { tabId: message.tabId || sender.tab?.id });
+    runScan(message.tabId || sender.tab?.id, false).then((result) => sendResponse({ ok: true, count: result.assignments.length })).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); sendResponse({ ok: false, error: error.message }); });
     return true;
   }
   if (message?.type === "PRAIRIERUN_HOME_READY" && sender.tab?.id) {
     debugLog("PrairieLearn home reported ready", { tabId: sender.tab.id });
     runScan(sender.tab.id, true).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); });
-    return true;
-  }
-  if (message?.type === "PRAIRIERUN_SYNC_ASSIGNMENTS" && sender.tab?.id) {
-    const assignments = (message.assignments || []).filter((item) => ["new", "changed", "error"].includes(item.syncState) && item.dueAtLocal);
-    (async () => {
-      try {
-        const results = await PrairieRunCalendar.exportAssignments(assignments);
-        const stored = await chrome.storage.local.get(ASSIGNMENTS_KEY);
-        const current = stored[ASSIGNMENTS_KEY] || [];
-        applyExportResults(results, current);
-        await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: current });
-        sendResponse({ ok: true, results, assignments: current });
-      } catch (error) {
-        sendResponse({ ok: false, error: error?.message || "Calendar export failed." });
-      }
-    })();
     return true;
   }
   if (message?.type === "PRAIRIERUN_GET_STATE") {

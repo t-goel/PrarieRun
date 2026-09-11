@@ -9,9 +9,6 @@
 #prairierun-home-panel .prr-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; font-size: .78rem; margin-top: .1rem; }
 #prairierun-home-panel .prr-sync { color: #6c757d; }
 #prairierun-home-panel .prr-sync--done { color: #198754; font-weight: 600; }
-#prairierun-home-panel .prr-sync-action { white-space: nowrap; }
-#prairierun-home-panel .prr-sync-action--synced,
-#prairierun-home-panel .prr-sync-action--synced:disabled { border: 0; background: transparent; box-shadow: none; color: #7fe0ad; font-size: .78rem; font-weight: 600; opacity: 1; }
 #prairierun-home-panel .prr-actions { display: flex; align-items: center; gap: .5rem; }
 #prairierun-home-panel .prr-collapsed summary { cursor: pointer; }
 #prairierun-home-panel a { text-decoration: none; }

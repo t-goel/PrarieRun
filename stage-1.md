@@ -33,7 +33,7 @@ The first implementation must target one known PrairieLearn deployment. Keep sel
 - For Stage 1, “changed” means PrairieLearn reports a higher score than the last scan. Completion-state changes are handled by Stage 2.
 - Already-synced assignments remain visible but are not exported again.
 - Assignments without due dates remain in staging but are excluded from calendar export by default.
-- Primary action: **Sync assignments**.
+- Synchronization happens automatically after each scan.
 - The staging area shows assignment details and due-date edits without per-assignment selection controls.
 - A user can enter a due date/time for a missing-date assignment in staging. Once a valid date is entered, it becomes eligible for synchronization.
 
