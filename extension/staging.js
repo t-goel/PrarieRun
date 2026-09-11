@@ -1,5 +1,8 @@
 const ASSIGNMENTS_KEY = "prairierunAssignments";
+const SETTINGS_KEY = "prairierunSettings";
 let assignments = [];
+let settings = { autoAddToCalendar: true };
+let autoExportStarted = false;
 const listElement = document.querySelector("#assignment-list");
 const summaryElement = document.querySelector("#summary");
 const noticeElement = document.querySelector("#notice");
@@ -63,6 +66,7 @@ function render() {
 }
 
 async function persist() { await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments }); render(); }
+async function persistSettings() { await chrome.storage.local.set({ [SETTINGS_KEY]: settings }); }
 async function editDueDate(id) {
   const item = assignments.find((entry) => entry.id === id); if (!item) return;
   const current = item.manuallyEnteredDueAt || item.dueAtLocal || "";
@@ -101,6 +105,13 @@ async function exportSelected(closeOnSuccess = false) {
   }
 }
 
+function maybeAutoExport() {
+  if (!new URLSearchParams(location.search).has("auto") || !settings.autoAddToCalendar || autoExportStarted) return;
+  if (!assignments.some((item) => item.selected && hasHardChange(item))) return;
+  autoExportStarted = true;
+  exportSelected(true);
+}
+
 function updateExportButtons() {
   const enabled = assignments.some((item) => item.selected && hasHardChange(item));
   document.querySelector("#quick-add").disabled = !enabled;
@@ -110,4 +121,14 @@ document.querySelector("#quick-add").addEventListener("click", () => {
   if (!selectedAssignments().some(hasHardChange)) return;
   exportSelected(true);
 });
-chrome.storage.local.get(ASSIGNMENTS_KEY).then((stored) => { assignments = stored[ASSIGNMENTS_KEY] || []; render(); });
+document.querySelector("#auto-add-setting").addEventListener("change", async (event) => {
+  settings.autoAddToCalendar = event.target.checked;
+  await persistSettings();
+});
+chrome.runtime.onMessage.addListener((message) => { if (message?.type === "PRAIRIERUN_AUTO_ADD") maybeAutoExport(); });
+chrome.storage.local.get(ASSIGNMENTS_KEY).then((stored) => { assignments = stored[ASSIGNMENTS_KEY] || []; render(); maybeAutoExport(); });
+chrome.storage.local.get(SETTINGS_KEY).then((stored) => {
+  settings = { ...settings, ...(stored[SETTINGS_KEY] || {}) };
+  document.querySelector("#auto-add-setting").checked = settings.autoAddToCalendar !== false;
+  maybeAutoExport();
+});

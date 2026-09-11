@@ -1,7 +1,7 @@
 const ASSIGNMENTS_KEY = "prairierunAssignments";
 const SYNC_KEY = "prairierunSyncStatus";
 const SETTINGS_KEY = "prairierunSettings";
-const defaultSettings = { prairieLearnOrigin: "https://us.prairielearn.com", completionThreshold: 95, defaultReminderMinutes: 10 };
+const defaultSettings = { prairieLearnOrigin: "https://us.prairielearn.com", completionThreshold: 95, defaultReminderMinutes: 10, autoAddToCalendar: true };
 let scanInFlight = false;
 
 async function getSettings() {
@@ -106,14 +106,15 @@ async function startScan(sourceTabId) {
   return result;
 }
 
-async function openStagingArea() {
+async function openStagingArea(autoAdd = false) {
   const stagingUrl = chrome.runtime.getURL("staging.html");
   const existing = await chrome.tabs.query({ url: `${stagingUrl}*` });
   if (existing[0]?.id) {
     await chrome.tabs.update(existing[0].id, { active: true });
+    if (autoAdd) chrome.tabs.sendMessage(existing[0].id, { type: "PRAIRIERUN_AUTO_ADD" }).catch(() => undefined);
     return;
   }
-  await chrome.tabs.create({ url: stagingUrl, active: true });
+  await chrome.tabs.create({ url: autoAdd ? `${stagingUrl}?auto=1` : stagingUrl, active: true });
 }
 
 async function runScan(sourceTabId, openWhenNew) {
@@ -123,7 +124,7 @@ async function runScan(sourceTabId, openWhenNew) {
     const scan = await startScan(sourceTabId);
     const assignments = scan.merged;
     const newOrChanged = assignments.filter((item) => scan.detectedIds.has(item.id));
-    if (openWhenNew && newOrChanged.length) await openStagingArea();
+    if (openWhenNew && newOrChanged.length) await openStagingArea(true);
     return { assignments, newOrChanged };
   } finally {
     scanInFlight = false;

@@ -9,6 +9,8 @@ main { max-width: 1120px; margin: 0 auto; padding: 20px 24px 48px; }
 h1 { margin: 0 0 5px; font-size: 28px; letter-spacing: -.03em; }
 h2 { margin: 0 0 7px; font-size: 18px; }
 .muted { color: #607080; font-size: 13px; line-height: 1.45; }
+.auto-setting { display: block; margin-top: 12px; color: #405263; font-size: 12px; }
+.auto-setting input { margin-right: 6px; vertical-align: -1px; }
 .top-actions { display: grid; min-width: 280px; gap: 8px; }
 .primary, .secondary { border-radius: 8px; padding: 10px 13px; font-weight: 700; }
 .primary { border: 0; background: #1f6feb; color: white; }
