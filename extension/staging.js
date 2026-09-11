@@ -10,6 +10,7 @@ function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;")
 function dueLabel(item) { return item.dueAtLocal ? `${item.dueAtLocal}${item.timezone ? ` (${item.timezone})` : ""}` : "No due date"; }
 function selectedAssignments() { return assignments.filter((item) => item.selected); }
 function courseAssignments(courseKey) { return assignments.filter((item) => (item.courseInstanceId || item.courseName || "Unknown class") === courseKey); }
+function hasHardChange(item) { return ["new", "changed"].includes(item.syncState) && Boolean(item.dueAtLocal); }
 function isCollapsedAssignment(item) {
   if (item.syncState === "synced") return true;
   if (!item.dueAtLocal && item.completionStatus) return true;
@@ -49,6 +50,7 @@ function render() {
     const item = assignments.find((entry) => entry.id === select.dataset.completionId); if (!item) return;
     item.manualCompletionStatus = select.value || null;
     item.completionStatus = item.manualCompletionStatus || item.sourceCompletionStatus || "unknown";
+    item.syncState = "changed";
     if (item.dueAtLocal) item.selected = true;
     await persist();
   }));
@@ -56,6 +58,7 @@ function render() {
     courseAssignments(button.dataset.courseKey).forEach((item) => { item.selected = button.dataset.courseAction === "select" && Boolean(item.dueAtLocal); });
     await persist();
   }));
+  updateExportButtons();
 }
 
 async function persist() { await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments }); render(); }
@@ -65,7 +68,7 @@ async function editDueDate(id) {
   const value = prompt("Enter due date/time as YYYY-MM-DD HH:MM. Leave blank to remove the manual date.", current.replace("T", " ").slice(0, 16));
   if (value === null) return;
   if (!value.trim()) { item.manuallyEnteredDueAt = null; item.dueAtLocal = null; item.selected = false; }
-  else { const normalized = value.trim().replace("T", " "); if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(normalized)) { alert("Use YYYY-MM-DD HH:MM."); return; } item.manuallyEnteredDueAt = normalized; item.dueAtLocal = normalized; item.selected = true; }
+  else { const normalized = value.trim().replace("T", " "); if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(normalized)) { alert("Use YYYY-MM-DD HH:MM."); return; } item.manuallyEnteredDueAt = normalized; item.dueAtLocal = normalized; item.syncState = item.syncState === "new" ? "new" : "changed"; item.selected = true; }
   await persist();
 }
 function showPreview() {
@@ -107,11 +110,17 @@ async function exportSelected(closeOnSuccess = false) {
 }
 
 document.querySelector("#add-new").addEventListener("click", showPreview);
+function updateExportButtons() {
+  const enabled = assignments.some((item) => item.selected && hasHardChange(item));
+  document.querySelector("#quick-add").disabled = !enabled;
+  document.querySelector("#add-new").disabled = !enabled;
+}
+
 document.querySelector("#quick-add").addEventListener("click", () => {
-  if (!selectedAssignments().some((item) => item.dueAtLocal)) { alert("There are no selected assignments with due dates."); return; }
+  if (!selectedAssignments().some(hasHardChange)) return;
   exportSelected(true);
 });
 document.querySelector("#deselect").addEventListener("click", async () => { assignments.forEach((item) => { item.selected = false; }); await persist(); });
 document.querySelector("#customize").addEventListener("click", () => { customize = !customize; document.querySelector("#customize").textContent = customize ? "Back to bulk view" : "Customize selection"; render(); });
-document.querySelector("#confirm-export").addEventListener("click", (event) => { event.preventDefault(); exportSelected(); });
+document.querySelector("#confirm-export").addEventListener("click", (event) => { event.preventDefault(); if (selectedAssignments().some(hasHardChange)) exportSelected(); });
 chrome.storage.local.get(ASSIGNMENTS_KEY).then((stored) => { assignments = stored[ASSIGNMENTS_KEY] || []; render(); });
