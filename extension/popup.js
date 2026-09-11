@@ -1,21 +1,12 @@
 const scanButton = document.querySelector("#scan");
 const statusElement = document.querySelector("#status");
 const contextElement = document.querySelector("#context");
-const showUndatedElement = document.querySelector("#show-undated");
 const resetDataButton = document.querySelector("#reset-data");
-let settings = { showUndatedAssignments: false };
 
 function showStatus(text, error = false) {
   if (statusElement) { statusElement.textContent = text; statusElement.classList.toggle("error", error); return; }
   contextElement.textContent = text;
   contextElement.classList.toggle("error", error);
-}
-function applySettings(nextSettings = {}) {
-  settings = { ...settings, ...nextSettings };
-  showUndatedElement.checked = settings.showUndatedAssignments === true;
-}
-function saveSettings() {
-  return chrome.storage.local.set({ prairierunSettings: settings });
 }
 function sendRuntimeMessage(message, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
@@ -44,7 +35,6 @@ function refreshState() {
   console.log("[PrairieRun] Popup refreshing state");
   sendRuntimeMessage({ type: "PRAIRIERUN_GET_STATE" }).then((response) => {
     if (!response?.ok) return;
-    applySettings(response.settings);
     if (response.sync?.state === "scanning") showStatus(`${response.sync.current || "Scanning…"} (${response.sync.found || 0} found)`);
     if (response.sync?.state === "complete") showStatus(`Scan complete: ${response.sync.found || 0} assignments found.`);
     if (response.sync?.state === "error") showStatus(response.sync.current || "Scan failed.", true);
@@ -70,18 +60,11 @@ scanButton.addEventListener("click", () => {
 
 refreshState();
 
-showUndatedElement.addEventListener("change", async () => {
-  settings.showUndatedAssignments = showUndatedElement.checked;
-  await saveSettings();
-  refreshState();
-});
-
 resetDataButton.addEventListener("click", async () => {
   if (!confirm("Clear PrairieRun assignments, sync state, calendar mappings, settings, and cached authorization?")) return;
   resetDataButton.disabled = true;
   await chrome.storage.local.clear();
   await chrome.storage.session.clear();
   resetDataButton.disabled = false;
-  applySettings({ showUndatedAssignments: false });
   showStatus("Test data cleared. Refresh PrairieLearn to scan again.");
 });
