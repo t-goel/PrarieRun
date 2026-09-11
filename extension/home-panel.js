@@ -4,7 +4,7 @@
   const SETTINGS_KEY = "prairierunSettings";
   const ASSIGNMENTS_KEY = "prairierunAssignments";
   let assignments = [];
-  let settings = { autoAddToCalendar: true, showUndatedAssignments: false };
+  let settings = { showUndatedAssignments: false };
   let panel;
 
   function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;"); }
@@ -121,7 +121,7 @@
     built.innerHTML = `<div class="card-header bg-primary text-white prr-header">
       <span>PrairieRun <span class="prr-count"></span></span>
       <div class="prr-header-controls">
-        <label class="prr-auto-add-label"><input type="checkbox" id="prr-show-undated" /> Undated</label>
+        <label class="prr-setting-label"><input type="checkbox" id="prr-show-undated" /> Undated</label>
         <button type="button" class="btn btn-light btn-sm prr-sync-action" id="prr-sync-action" disabled>Needs sync</button>
       </div>
     </div>

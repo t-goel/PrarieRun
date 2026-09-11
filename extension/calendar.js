@@ -1,3 +1,4 @@
+(function () {
 const CALENDAR_MAPPINGS_KEY = "prairierunCalendarMappings";
 const CALENDAR_SYNC_KEY = "prairierunCalendarSync";
 const CALENDAR_TOKEN_KEY = "prairierunCalendarToken";
@@ -147,8 +148,9 @@ async function exportAssignments(assignments) {
       if (!calendar) throw new Error(`Could not find a calendar for ${assignment.courseName}.`);
       mappings[courseKey] = calendar.id;
       const classColorId = colorPlan.classColors[courseKey];
-      const known = sync[assignment.id];
-      let event = known?.googleEventId ? { id: known.googleEventId } : await findMarkedEvent(assignment, calendar.id, token);
+      // Always verify the marked event. A user may have deleted it directly in
+      // Google Calendar while the local sync record still has its old event ID.
+      let event = await findMarkedEvent(assignment, calendar.id, token);
       const colorId = assignment.completionStatus === "completed"
         ? colorPlan.greyColorId
         : assignment.completionStatus === "unknown" && event?.id
@@ -169,3 +171,4 @@ async function exportAssignments(assignments) {
 }
 
 globalThis.PrairieRunCalendar = { exportAssignments };
+})();

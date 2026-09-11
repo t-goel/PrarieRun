@@ -2,9 +2,8 @@ const scanButton = document.querySelector("#scan");
 const statusElement = document.querySelector("#status");
 const contextElement = document.querySelector("#context");
 const showUndatedElement = document.querySelector("#show-undated");
-const autoAddElement = document.querySelector("#auto-add");
 const resetDataButton = document.querySelector("#reset-data");
-let settings = { autoAddToCalendar: true, showUndatedAssignments: false };
+let settings = { showUndatedAssignments: false };
 
 function showStatus(text, error = false) {
   if (statusElement) { statusElement.textContent = text; statusElement.classList.toggle("error", error); return; }
@@ -14,7 +13,6 @@ function showStatus(text, error = false) {
 function applySettings(nextSettings = {}) {
   settings = { ...settings, ...nextSettings };
   showUndatedElement.checked = settings.showUndatedAssignments === true;
-  autoAddElement.checked = settings.autoAddToCalendar !== false;
 }
 function saveSettings() {
   return chrome.storage.local.set({ prairierunSettings: settings });
@@ -61,7 +59,7 @@ scanButton.addEventListener("click", () => {
   console.log("[PrairieRun] Popup scan button clicked");
   scanButton.disabled = true; showStatus("Starting scan…");
   chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-    sendRuntimeMessage({ type: "PRAIRIERUN_START_SCAN", tabId: tab?.id }, 45000).then((response) => {
+    sendRuntimeMessage({ type: "PRAIRIERUN_START_SCAN", tabId: tab?.id, forceSync: true }, 45000).then((response) => {
       scanButton.disabled = false;
       if (!response?.ok) showStatus(response?.error || "Scan failed.", true);
       else showStatus(`Scan complete: ${response.count} assignments found.`);
@@ -78,17 +76,12 @@ showUndatedElement.addEventListener("change", async () => {
   refreshState();
 });
 
-autoAddElement.addEventListener("change", async () => {
-  settings.autoAddToCalendar = autoAddElement.checked;
-  await saveSettings();
-});
-
 resetDataButton.addEventListener("click", async () => {
   if (!confirm("Clear PrairieRun assignments, sync state, calendar mappings, settings, and cached authorization?")) return;
   resetDataButton.disabled = true;
   await chrome.storage.local.clear();
   await chrome.storage.session.clear();
   resetDataButton.disabled = false;
-  applySettings({ autoAddToCalendar: true, showUndatedAssignments: false });
+  applySettings({ showUndatedAssignments: false });
   showStatus("Test data cleared. Refresh PrairieLearn to scan again.");
 });

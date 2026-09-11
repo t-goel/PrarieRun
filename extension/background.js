@@ -1,11 +1,11 @@
-importScripts("calendar.js");
+if (!globalThis.PrairieRunCalendar) importScripts("calendar.js");
 
 const ASSIGNMENTS_KEY = "prairierunAssignments";
 const SYNC_KEY = "prairierunSyncStatus";
 const SETTINGS_KEY = "prairierunSettings";
 const BACKGROUND_CALENDAR_SYNC_KEY = "prairierunCalendarSync";
 const DEBUG_LOG_KEY = "prairierunDebugLog";
-const defaultSettings = { prairieLearnOrigin: "https://us.prairielearn.com", completionThreshold: 95, defaultReminderMinutes: 10, autoAddToCalendar: true, showUndatedAssignments: false };
+const defaultSettings = { prairieLearnOrigin: "https://us.prairielearn.com", completionThreshold: 95, defaultReminderMinutes: 10, showUndatedAssignments: false };
 let scanInFlight = false;
 const debugEntries = [];
 
@@ -197,12 +197,13 @@ function applyExportResults(results, assignments) {
   });
 }
 
-async function notifyHomeTab(tabId, assignments, detectedIds, autoAdd) {
+async function notifyHomeTab(tabId, assignments, detectedIds, autoAdd, forceSync = false) {
   const settings = await getSettings();
   let exportResults = [];
-  if (autoAdd && settings.autoAddToCalendar) {
-    const eligible = assignments.filter((item) => detectedIds.has(item.id) && ["new", "changed"].includes(item.syncState) && item.dueAtLocal && isCurrentAssignment(item));
+  if (autoAdd || forceSync) {
+    const eligible = assignments.filter((item) => (forceSync || detectedIds.has(item.id)) && item.dueAtLocal && isCurrentAssignment(item));
     if (eligible.length) {
+      debugLog("Reconciling Calendar assignments", { count: eligible.length, forceSync });
       exportResults = await PrairieRunCalendar.exportAssignments(eligible);
       applyExportResults(exportResults, assignments);
       await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments });
@@ -211,15 +212,15 @@ async function notifyHomeTab(tabId, assignments, detectedIds, autoAdd) {
   chrome.tabs.sendMessage(tabId, { type: "PRAIRIERUN_HOME_SCAN_RESULT", assignments, exportResults }).catch(() => undefined);
 }
 
-async function runScan(sourceTabId, openWhenNew) {
+async function runScan(sourceTabId, openWhenNew, forceSync = false) {
   if (scanInFlight) { debugLog("Scan ignored because another scan is already running"); return { assignments: [], skipped: true }; }
   scanInFlight = true;
-  debugLog("Scan lock acquired", { sourceTabId, openWhenNew });
+  debugLog("Scan lock acquired", { sourceTabId, openWhenNew, forceSync });
   try {
     const scan = await startScan(sourceTabId);
     const assignments = scan.merged;
     const newOrChanged = assignments.filter((item) => scan.detectedIds.has(item.id));
-    await notifyHomeTab(sourceTabId, assignments, scan.detectedIds, openWhenNew);
+    await notifyHomeTab(sourceTabId, assignments, scan.detectedIds, openWhenNew, forceSync);
     return { assignments, newOrChanged };
   } finally {
     scanInFlight = false;
@@ -229,8 +230,8 @@ async function runScan(sourceTabId, openWhenNew) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "PRAIRIERUN_START_SCAN") {
-    debugLog("Popup requested scan", { tabId: message.tabId || sender.tab?.id });
-    runScan(message.tabId || sender.tab?.id, false).then((result) => sendResponse({ ok: true, count: result.assignments.length })).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); sendResponse({ ok: false, error: error.message }); });
+    debugLog("Popup requested scan", { tabId: message.tabId || sender.tab?.id, forceSync: message.forceSync === true });
+    runScan(message.tabId || sender.tab?.id, false, message.forceSync === true).then((result) => sendResponse({ ok: true, count: result.assignments.length })).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); sendResponse({ ok: false, error: error.message }); });
     return true;
   }
   if (message?.type === "PRAIRIERUN_HOME_READY" && sender.tab?.id) {

@@ -1,7 +1,7 @@
 const ASSIGNMENTS_KEY = "prairierunAssignments";
 const SETTINGS_KEY = "prairierunSettings";
 let assignments = [];
-let settings = { autoAddToCalendar: true, showUndatedAssignments: false };
+let settings = { showUndatedAssignments: false };
 let autoExportStarted = false;
 const listElement = document.querySelector("#assignment-list");
 const summaryElement = document.querySelector("#summary");
@@ -105,7 +105,7 @@ async function exportSelected(singleId = null, closeOnSuccess = false) {
 }
 
 function maybeAutoExport() {
-  if (!new URLSearchParams(location.search).has("auto") || !settings.autoAddToCalendar || autoExportStarted) return;
+  if (!new URLSearchParams(location.search).has("auto") || autoExportStarted) return;
   if (!selectedAssignments().some(hasHardChange)) return;
   autoExportStarted = true;
   exportSelected(null, true);
