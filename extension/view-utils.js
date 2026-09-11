@@ -10,6 +10,16 @@
     return match?.[1] || null;
   }
 
+  function formatDueDate(value) {
+    const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})/);
+    if (!match) return value ? String(value) : "No due date";
+    const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    const hour = Number(match[4]);
+    const suffix = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 || 12;
+    return `${months[Number(match[2]) - 1]} ${Number(match[3])}, ${displayHour}:${match[5]} ${suffix}`;
+  }
+
   function isCurrent(item, now = new Date()) {
     const due = dueDateKey(item);
     return due ? due >= dateKey(now) : false;
@@ -37,7 +47,7 @@
             : "Not synced";
   }
 
-  const api = { dueDateKey, isCurrent, isCompleted, displayable, compareAssignments, statusLabel };
+  const api = { dueDateKey, formatDueDate, isCurrent, isCompleted, displayable, compareAssignments, statusLabel };
   globalThis.PrairieRunView = api;
   if (typeof module !== "undefined") module.exports = api;
 })();

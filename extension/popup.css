@@ -16,3 +16,4 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .settings-card label { display: flex; align-items: center; gap: 7px; cursor: pointer; }
 .settings-card input { accent-color: #fff; }
 .settings-card input[type="number"] { width: 52px; border: 0; border-radius: 4px; padding: 4px 5px; color: #17202a; font: inherit; text-align: center; }
+.settings-card select { min-width: 132px; border: 0; border-radius: 4px; padding: 4px 5px; color: #17202a; font: inherit; }

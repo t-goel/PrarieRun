@@ -11,3 +11,9 @@
 #prairierun-home-panel .prr-collapsed summary { cursor: pointer; }
 #prairierun-home-panel a { text-decoration: none; }
 #prairierun-home-panel a:hover { text-decoration: underline; }
+.prr-date-dialog { border: 0; border-radius: .5rem; padding: 1.25rem; box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.25); }
+.prr-date-dialog::backdrop { background: rgba(0,0,0,.35); }
+.prr-date-dialog form { display: grid; gap: .75rem; min-width: 280px; }
+.prr-date-dialog label { display: grid; gap: .25rem; font-weight: 600; }
+.prr-date-dialog input { padding: .4rem; }
+.prr-dialog-actions { display: flex; justify-content: flex-end; gap: .4rem; flex-wrap: wrap; }

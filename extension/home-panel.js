@@ -8,7 +8,7 @@
   let panel;
 
   function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;"); }
-  function dueLabel(item) { return item.dueAtLocal ? `${item.dueAtLocal}${item.timezone ? ` (${item.timezone})` : ""}` : "No due date"; }
+  function dueLabel(item) { return PrairieRunView.formatDueDate(item.dueAtLocal); }
   function visibleAssignments() { return assignments.filter((item) => PrairieRunView.displayable(item, settings.showUndatedAssignments)); }
 
   function rowMarkup(item) {
@@ -59,16 +59,22 @@
   async function editDueDate(id) {
     const item = assignments.find((entry) => entry.id === id); if (!item) return;
     const current = item.manuallyEnteredDueAt || item.dueAtLocal || "";
-    const value = prompt("Enter due date/time as YYYY-MM-DD HH:MM. Leave blank to remove the manual date.", current.replace("T", " ").slice(0, 16));
-    if (value === null) return;
-    if (!value.trim()) { item.manuallyEnteredDueAt = null; item.dueAtLocal = null; }
-    else {
-      const normalized = value.trim().replace("T", " ");
-      if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(normalized)) { alert("Use YYYY-MM-DD HH:MM."); return; }
-      item.manuallyEnteredDueAt = normalized; item.dueAtLocal = normalized; item.syncState = item.syncState === "new" ? "new" : "changed";
-    }
-    await persist();
-    chrome.runtime.sendMessage({ type: "PRAIRIERUN_ASSIGNMENT_UPDATED", assignment: item }).catch(() => undefined);
+    const normalizedCurrent = current.replace(" ", "T").slice(0, 16);
+    const dialog = document.createElement("dialog");
+    dialog.className = "prr-date-dialog";
+    dialog.innerHTML = `<form method="dialog"><h3>Assignment due date</h3><label>Date <input type="date" name="date" value="${escapeHtml(normalizedCurrent.slice(0, 10))}" /></label><label>Time <input type="time" name="time" value="${escapeHtml(normalizedCurrent.slice(11, 16))}" /></label><p class="text-muted">Timezone: ${escapeHtml(settings.timezone || "CST")}</p><div class="prr-dialog-actions"><button value="cancel" class="btn btn-secondary">Cancel</button><button value="remove" class="btn btn-outline-danger">Remove date</button><button value="save" class="btn btn-primary">Save</button></div></form>`;
+    document.body.append(dialog);
+    dialog.addEventListener("close", async () => {
+      if (dialog.returnValue === "save") {
+        const date = dialog.querySelector('[name="date"]').value;
+        const time = dialog.querySelector('[name="time"]').value;
+        if (!date || !time) { dialog.remove(); alert("Choose both a date and time."); return; }
+        item.manuallyEnteredDueAt = `${date} ${time}`; item.dueAtLocal = item.manuallyEnteredDueAt; item.timezone = settings.timezone || "CST"; item.syncState = item.syncState === "new" ? "new" : "changed";
+      } else if (dialog.returnValue === "remove") { item.manuallyEnteredDueAt = null; item.dueAtLocal = null; }
+      dialog.remove();
+      if (dialog.returnValue === "save" || dialog.returnValue === "remove") { await persist(); chrome.runtime.sendMessage({ type: "PRAIRIERUN_ASSIGNMENT_UPDATED", assignment: item }).catch(() => undefined); }
+    });
+    dialog.showModal();
   }
 
   function buildPanel() {

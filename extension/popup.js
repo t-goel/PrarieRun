@@ -1,6 +1,7 @@
 const scanButton = document.querySelector("#scan");
 const contextElement = document.querySelector("#context");
 const notificationLeadElement = document.querySelector("#notification-lead-hours");
+const timezoneElement = document.querySelector("#timezone");
 const resetDataButton = document.querySelector("#reset-data");
 let settings = { notificationLeadMinutes: 240 };
 
@@ -12,6 +13,7 @@ function applySettings(nextSettings = {}) {
   settings = { ...settings, ...nextSettings };
   const minutes = Number(settings.notificationLeadMinutes);
   notificationLeadElement.value = Number.isFinite(minutes) ? String(minutes / 60) : "4";
+  timezoneElement.value = settings.timezone || "CST";
 }
 function saveSettings() {
   return chrome.storage.local.set({ prairierunSettings: settings });
@@ -79,12 +81,17 @@ notificationLeadElement.addEventListener("change", async () => {
   await saveSettings();
 });
 
+timezoneElement.addEventListener("change", async () => {
+  settings.timezone = timezoneElement.value;
+  await saveSettings();
+});
+
 resetDataButton.addEventListener("click", async () => {
   if (!confirm("Clear PrairieRun assignments, sync state, calendar mappings, settings, and cached authorization?")) return;
   resetDataButton.disabled = true;
   await chrome.storage.local.clear();
   await chrome.storage.session.clear();
   resetDataButton.disabled = false;
-  applySettings({ notificationLeadMinutes: 240 });
+  applySettings({ notificationLeadMinutes: 240, timezone: "CST" });
   showStatus("Test data cleared. Refresh PrairieLearn to scan again.");
 });
