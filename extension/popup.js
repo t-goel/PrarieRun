@@ -1,12 +1,22 @@
 const scanButton = document.querySelector("#scan");
 const statusElement = document.querySelector("#status");
 const contextElement = document.querySelector("#context");
+const notificationLeadElement = document.querySelector("#notification-lead-hours");
 const resetDataButton = document.querySelector("#reset-data");
+let settings = { notificationLeadMinutes: 240 };
 
 function showStatus(text, error = false) {
   if (statusElement) { statusElement.textContent = text; statusElement.classList.toggle("error", error); return; }
   contextElement.textContent = text;
   contextElement.classList.toggle("error", error);
+}
+function applySettings(nextSettings = {}) {
+  settings = { ...settings, ...nextSettings };
+  const minutes = Number(settings.notificationLeadMinutes);
+  notificationLeadElement.value = Number.isFinite(minutes) ? String(minutes / 60) : "4";
+}
+function saveSettings() {
+  return chrome.storage.local.set({ prairierunSettings: settings });
 }
 function sendRuntimeMessage(message, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
@@ -35,6 +45,7 @@ function refreshState() {
   console.log("[PrairieRun] Popup refreshing state");
   sendRuntimeMessage({ type: "PRAIRIERUN_GET_STATE" }).then((response) => {
     if (!response?.ok) return;
+    applySettings(response.settings);
     if (response.sync?.state === "scanning") showStatus(`${response.sync.current || "Scanning…"} (${response.sync.found || 0} found)`);
     if (response.sync?.state === "complete") showStatus(`Scan complete: ${response.sync.found || 0} assignments found.`);
     if (response.sync?.state === "error") showStatus(response.sync.current || "Scan failed.", true);
@@ -60,11 +71,23 @@ scanButton.addEventListener("click", () => {
 
 refreshState();
 
+notificationLeadElement.addEventListener("change", async () => {
+  const hours = Number(notificationLeadElement.value);
+  if (!Number.isFinite(hours) || hours < 0 || hours > 168) {
+    notificationLeadElement.value = String(settings.notificationLeadMinutes / 60);
+    return;
+  }
+  settings.notificationLeadMinutes = Math.round(hours * 60);
+  await saveSettings();
+});
+
 resetDataButton.addEventListener("click", async () => {
   if (!confirm("Clear PrairieRun assignments, sync state, calendar mappings, settings, and cached authorization?")) return;
   resetDataButton.disabled = true;
   await chrome.storage.local.clear();
   await chrome.storage.session.clear();
+  await chrome.alarms.clearAll();
   resetDataButton.disabled = false;
+  applySettings({ notificationLeadMinutes: 240 });
   showStatus("Test data cleared. Refresh PrairieLearn to scan again.");
 });
