@@ -12,6 +12,7 @@ function selectedAssignments() { return assignments.filter((item) => item.select
 function courseAssignments(courseKey) { return assignments.filter((item) => (item.courseInstanceId || item.courseName || "Unknown class") === courseKey); }
 function isCollapsedAssignment(item) {
   if (item.syncState === "synced") return true;
+  if (!item.dueAtLocal && item.completionStatus) return true;
   if (item.completionStatus === "unknown" && !["new", "changed", "error"].includes(item.syncState)) return true;
   return false;
 }
@@ -64,7 +65,7 @@ async function editDueDate(id) {
   const value = prompt("Enter due date/time as YYYY-MM-DD HH:MM. Leave blank to remove the manual date.", current.replace("T", " ").slice(0, 16));
   if (value === null) return;
   if (!value.trim()) { item.manuallyEnteredDueAt = null; item.dueAtLocal = null; item.selected = false; }
-  else { const normalized = value.trim().replace("T", " "); if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(normalized)) { alert("Use YYYY-MM-DD HH:MM."); return; } item.manuallyEnteredDueAt = normalized; item.dueAtLocal = normalized; if (["new", "changed"].includes(item.syncState)) item.selected = true; }
+  else { const normalized = value.trim().replace("T", " "); if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(normalized)) { alert("Use YYYY-MM-DD HH:MM."); return; } item.manuallyEnteredDueAt = normalized; item.dueAtLocal = normalized; item.selected = true; }
   await persist();
 }
 function showPreview() {
