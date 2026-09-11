@@ -15,7 +15,7 @@
 
   function rowMarkup(item) {
     const status = PrairieRunView.statusLabel(item);
-    const completion = item.manualCompletionStatus || item.completionStatus || "unknown";
+    const completion = item.completionStatus || "unknown";
     const checkbox = isActionable(item)
       ? `<input class="prr-check" type="checkbox" data-id="${escapeHtml(item.id)}" ${item.selected ? "checked" : ""} aria-label="Select ${escapeHtml(item.title)}" />`
       : `<span class="prr-check-spacer"></span>`;
@@ -26,28 +26,26 @@
         <div class="prr-meta text-muted">${syncBadge}${syncBadge ? " " : ""}<span>${escapeHtml(completion)}</span> <span>${escapeHtml(dueLabel(item))}</span>${item.score != null ? ` <span>${item.score}%</span>` : ""}</div>
       </div></div>
       <div class="prr-actions">
-        <select class="prr-select" data-completion-id="${escapeHtml(item.id)}" aria-label="Completion status for ${escapeHtml(item.title)}">
-          <option value="" ${!item.manualCompletionStatus ? "selected" : ""}>Use PrairieLearn</option>
-          <option value="completed" ${completion === "completed" && item.manualCompletionStatus ? "selected" : ""}>Completed</option>
-          <option value="incomplete" ${completion === "incomplete" && item.manualCompletionStatus ? "selected" : ""}>Incomplete</option>
-          <option value="unknown" ${completion === "unknown" && item.manualCompletionStatus ? "selected" : ""}>Unknown</option>
-        </select>
         <button type="button" class="btn btn-outline-secondary btn-sm" data-edit-id="${escapeHtml(item.id)}">${item.dueAtLocal ? "Edit date" : "Add date"}</button>
       </div>
     </li>`;
   }
 
   function listMarkup() {
-    const current = visibleAssignments().sort((a, b) => Number(PrairieRunView.isCompleted(a)) - Number(PrairieRunView.isCompleted(b)) || PrairieRunView.compareAssignments(a, b));
+    const current = visibleAssignments().sort(PrairieRunView.compareAssignments);
     if (!current.length) return `<li class="list-group-item text-muted">No assignments due today or later. Scan PrairieLearn to refresh.</li>`;
-    const groups = new Map();
-    current.forEach((item) => { const key = item.courseInstanceId || item.courseName || "Unknown class"; if (!groups.has(key)) groups.set(key, { name: item.courseName || key, items: [] }); groups.get(key).items.push(item); });
-    return [...groups.values()].map((group) => {
-      const incomplete = group.items.filter((item) => !PrairieRunView.isCompleted(item));
-      const completed = group.items.filter(PrairieRunView.isCompleted);
-      const completedBlock = completed.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${completed.length} completed assignment${completed.length === 1 ? "" : "s"}</summary><ul class="list-group list-group-flush">${completed.map(rowMarkup).join("")}</ul></details></li>` : "";
-      return `<li class="list-group-item prr-group-header">${escapeHtml(group.name)}</li>${incomplete.map(rowMarkup).join("")}${completedBlock}`;
-    }).join("");
+    const uncompleted = current.filter((item) => !PrairieRunView.isCompleted(item));
+    const completed = current.filter(PrairieRunView.isCompleted);
+    const topThree = uncompleted.filter((item) => item.dueAtLocal).slice(0, 3);
+    const overflow = uncompleted.filter((item) => !topThree.includes(item));
+    const groupMarkup = (items) => {
+      const groups = new Map();
+      items.forEach((item) => { const key = item.courseInstanceId || item.courseName || "Unknown class"; if (!groups.has(key)) groups.set(key, { name: item.courseName || key, items: [] }); groups.get(key).items.push(item); });
+      return [...groups.values()].map((group) => `<li class="list-group-item prr-group-header">${escapeHtml(group.name)}</li>${group.items.map(rowMarkup).join("")}`).join("");
+    };
+    const overflowBlock = overflow.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${overflow.length} more upcoming assignment${overflow.length === 1 ? "" : "s"}</summary><ul class="list-group list-group-flush">${groupMarkup(overflow)}</ul></details></li>` : "";
+    const completedBlock = completed.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${completed.length} completed assignment${completed.length === 1 ? "" : "s"}</summary><ul class="list-group list-group-flush">${groupMarkup(completed)}</ul></details></li>` : "";
+    return `${groupMarkup(topThree)}${overflowBlock}${completedBlock}`;
   }
 
   function render() {
@@ -58,14 +56,6 @@
     panel.querySelector(".prr-list").innerHTML = listMarkup();
     panel.querySelectorAll("input.prr-check").forEach((input) => input.addEventListener("change", async () => { const item = assignments.find((entry) => entry.id === input.dataset.id); if (item) item.selected = input.checked; await persist(); }));
     panel.querySelectorAll("button[data-edit-id]").forEach((button) => button.addEventListener("click", () => editDueDate(button.dataset.editId)));
-    panel.querySelectorAll("select[data-completion-id]").forEach((select) => select.addEventListener("change", async () => {
-      const item = assignments.find((entry) => entry.id === select.dataset.completionId); if (!item) return;
-      item.manualCompletionStatus = select.value || null;
-      item.completionStatus = item.manualCompletionStatus || item.sourceCompletionStatus || "unknown";
-      item.syncState = "changed";
-      if (item.dueAtLocal) item.selected = true;
-      await persist();
-    }));
     updateSyncAction();
   }
 

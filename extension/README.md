@@ -10,6 +10,8 @@
 - Stores assignments locally in Chrome.
 - Shows a compact staging area grouped by class.
 - Shows assignments due today or later; older assignments remain untouched in Google Calendar.
+- Shows the next three uncompleted assignments, with additional upcoming work and completed work in separate dropdowns.
+- Uses PrairieLearn completion status directly; completion overrides are not supported.
 - Sorts incomplete assignments first and puts completed assignments in a dropdown.
 - Keeps undated assignments hidden by default, with an extension setting to reveal them.
 - Shows a green `✓ Synced` state and per-assignment sync buttons when automatic sync is disabled.

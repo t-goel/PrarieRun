@@ -42,19 +42,19 @@ async function getSettings() {
 }
 
 function normalizeStoredAssignment(assignment, existing, now, syncedCompletion) {
-  const referenceCompletion = syncedCompletion || existing?.sourceCompletionStatus || existing?.completionStatus;
+  const referenceCompletion = syncedCompletion || existing?.completionStatus;
   const completionChanged = Boolean(existing && assignment.completionStatus && referenceCompletion && referenceCompletion !== assignment.completionStatus);
   const isNew = !existing;
   const changed = isNew || completionChanged;
+  const existingClean = { ...(existing || {}) };
+  delete existingClean.manualCompletionStatus;
+  delete existingClean.sourceCompletionStatus;
   const manuallyEnteredDueAt = existing?.manuallyEnteredDueAt || null;
   const dueAtLocal = manuallyEnteredDueAt || assignment.dueAtLocal || null;
-  const manualCompletionStatus = existing?.manualCompletionStatus || null;
   return {
-    ...existing, ...assignment, id: assignment.id, dueAtLocal, manuallyEnteredDueAt,
+    ...existingClean, ...assignment, id: assignment.id, dueAtLocal, manuallyEnteredDueAt,
     score: assignment.score ?? existing?.score ?? null,
-    sourceCompletionStatus: assignment.completionStatus || existing?.sourceCompletionStatus || "unknown",
-    manualCompletionStatus,
-    completionStatus: manualCompletionStatus || assignment.completionStatus || existing?.completionStatus || "unknown",
+    completionStatus: assignment.completionStatus || existing?.completionStatus || "unknown",
     sourceFingerprint: JSON.stringify({ title: assignment.title, dueAtLocal }),
     discoveredAt: existing?.discoveredAt || now, updatedAt: now,
     syncState: changed ? (isNew ? "new" : "changed") : (existing?.syncState === "error" ? "error" : "synced"),
@@ -71,7 +71,7 @@ async function saveScanResult(assignments) {
   const merged = assignments.map((item) => {
     const existing = previous.get(item.id);
     const syncedCompletion = calendarSync[item.id]?.completionStatus;
-    const referenceCompletion = syncedCompletion || existing?.sourceCompletionStatus || existing?.completionStatus;
+    const referenceCompletion = syncedCompletion || existing?.completionStatus;
     const completionChanged = Boolean(existing && item.completionStatus && referenceCompletion && referenceCompletion !== item.completionStatus);
     if (!existing || completionChanged) detectedIds.add(item.id);
     return normalizeStoredAssignment(item, existing, now, syncedCompletion);

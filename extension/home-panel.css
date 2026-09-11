@@ -14,7 +14,6 @@
 #prairierun-home-panel .prr-sync-action--synced,
 #prairierun-home-panel .prr-sync-action--synced:disabled { border: 0; background: transparent; box-shadow: none; color: #7fe0ad; font-size: .78rem; font-weight: 600; opacity: 1; }
 #prairierun-home-panel .prr-actions { display: flex; align-items: center; gap: .5rem; }
-#prairierun-home-panel .prr-select { font-size: .82rem; padding: .25rem .4rem; border: 1px solid #ced4da; border-radius: .25rem; background: #fff; }
 #prairierun-home-panel .prr-collapsed summary { cursor: pointer; }
 #prairierun-home-panel a { text-decoration: none; }
 #prairierun-home-panel a:hover { text-decoration: underline; }

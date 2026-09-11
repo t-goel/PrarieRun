@@ -22,7 +22,7 @@
   }
 
   function isCompleted(item) {
-    return (item?.manualCompletionStatus || item?.completionStatus || "unknown") === "completed";
+    return (item?.completionStatus || "unknown") === "completed";
   }
 
   function isPending(item) {
