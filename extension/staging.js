@@ -28,10 +28,7 @@ function render() {
   const groups = new Map();
   assignments.forEach((item) => { const key = item.courseInstanceId || item.courseName || "Unknown class"; if (!groups.has(key)) groups.set(key, { name: item.courseName || key, items: [] }); groups.get(key).items.push(item); });
   listElement.innerHTML = [...groups.values()].map((group) => {
-    const visible = group.items.slice(0, 5);
-    const extra = group.items.slice(5);
-    const extraMarkup = extra.length ? `<details class="more-assignments"><summary>Show ${extra.length} more assignment${extra.length === 1 ? "" : "s"}</summary>${extra.map(renderAssignment).join("")}</details>` : "";
-    return `<section class="course"><div class="course-header"><span class="course-name">${escapeHtml(group.name)}</span><span class="course-meta">${group.items.length} assignment${group.items.length === 1 ? "" : "s"}</span></div>${visible.map(renderAssignment).join("")}${extraMarkup}</section>`;
+    return `<section class="course"><div class="course-header"><span class="course-name">${escapeHtml(group.name)}</span><span class="course-meta">${group.items.length} assignment${group.items.length === 1 ? "" : "s"}</span></div>${group.items.map(renderAssignment).join("")}</section>`;
   }).join("");
   listElement.querySelectorAll("input[data-id]").forEach((input) => input.addEventListener("change", async () => { const item = assignments.find((entry) => entry.id === input.dataset.id); if (item) item.selected = input.checked; await persist(); }));
   listElement.querySelectorAll("button[data-edit-id]").forEach((button) => button.addEventListener("click", () => editDueDate(button.dataset.editId)));

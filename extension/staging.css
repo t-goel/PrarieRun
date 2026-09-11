@@ -24,9 +24,6 @@ h2 { margin: 0 0 7px; font-size: 18px; }
 .course-meta { color: #607080; font-size: 12px; }
 .assignment { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 12px 15px; border-bottom: 1px solid #edf0f2; }
 .assignment:last-child { border-bottom: 0; }
-.more-assignments { border-top: 1px solid #edf0f2; }
-.more-assignments summary { padding: 11px 15px; color: #1f6feb; cursor: pointer; font-size: 12px; font-weight: 650; list-style-position: inside; }
-.more-assignments[open] summary { border-bottom: 1px solid #edf0f2; }
 .assignment input { width: 16px; height: 16px; }
 .assignment-title { font-weight: 650; }
 .assignment-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; color: #607080; font-size: 12px; }
