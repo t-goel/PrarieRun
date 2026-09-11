@@ -69,6 +69,7 @@
       item.manuallyEnteredDueAt = normalized; item.dueAtLocal = normalized; item.syncState = item.syncState === "new" ? "new" : "changed";
     }
     await persist();
+    chrome.runtime.sendMessage({ type: "PRAIRIERUN_ASSIGNMENT_UPDATED", assignment: item }).catch(() => undefined);
   }
 
   function buildPanel() {

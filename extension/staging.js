@@ -53,6 +53,7 @@ async function editDueDate(id) {
   if (!value.trim()) { item.manuallyEnteredDueAt = null; item.dueAtLocal = null; }
   else { const normalized = value.trim().replace("T", " "); if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(normalized)) { alert("Use YYYY-MM-DD HH:MM."); return; } item.manuallyEnteredDueAt = normalized; item.dueAtLocal = normalized; item.syncState = item.syncState === "new" ? "new" : "changed"; }
   await persist();
+  chrome.runtime.sendMessage({ type: "PRAIRIERUN_ASSIGNMENT_UPDATED", assignment: item }).catch(() => undefined);
 }
 chrome.storage.local.get(ASSIGNMENTS_KEY).then((stored) => { assignments = stored[ASSIGNMENTS_KEY] || []; render(); });
 chrome.storage.local.get(SETTINGS_KEY).then((stored) => {

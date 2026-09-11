@@ -235,6 +235,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     runScan(sender.tab.id, true).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); });
     return true;
   }
+  if (message?.type === "PRAIRIERUN_ASSIGNMENT_UPDATED" && sender.tab?.id) {
+    const assignment = message.assignment;
+    if (!assignment?.id || !assignment.dueAtLocal || !["new", "changed", "error"].includes(assignment.syncState)) {
+      sendResponse({ ok: true, skipped: true });
+      return true;
+    }
+    PrairieRunCalendar.exportAssignments([assignment]).then(async (results) => {
+      const stored = await chrome.storage.local.get(ASSIGNMENTS_KEY);
+      const current = stored[ASSIGNMENTS_KEY] || [];
+      applyExportResults(results, current);
+      await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: current });
+      sendResponse({ ok: true, results, assignments: current });
+    }).catch((error) => sendResponse({ ok: false, error: error?.message || "Automatic calendar synchronization failed." }));
+    return true;
+  }
   if (message?.type === "PRAIRIERUN_GET_STATE") {
     chrome.storage.local.get([ASSIGNMENTS_KEY, SYNC_KEY, SETTINGS_KEY]).then((stored) => sendResponse({ ok: true, assignments: stored[ASSIGNMENTS_KEY] || [], sync: stored[SYNC_KEY] || { state: "idle" }, settings: { ...defaultSettings, ...(stored[SETTINGS_KEY] || {}) } }));
     return true;
