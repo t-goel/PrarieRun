@@ -5,7 +5,7 @@ const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 async function getCalendarToken() {
   const redirectUri = chrome.identity.getRedirectURL("oauth2");
   const params = new URLSearchParams({
-    client_id: "284599557855-pfljcv4vurch08uvfue1ea50mck0me2h.apps.googleusercontent.com",
+    client_id: "284599557855-m80j0r9kf52uou6n232ekslrrrpmdc9r.apps.googleusercontent.com",
     response_type: "token",
     redirect_uri: redirectUri,
     scope: "https://www.googleapis.com/auth/calendar",

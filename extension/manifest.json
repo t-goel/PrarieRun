@@ -7,10 +7,6 @@
   "background": {"service_worker": "background.js"},
   "permissions": ["storage", "tabs", "identity"],
   "host_permissions": ["https://us.prairielearn.com/*", "https://www.googleapis.com/*"],
-  "oauth2": {
-    "client_id": "284599557855-pfljcv4vurch08uvfue1ea50mck0me2h.apps.googleusercontent.com",
-    "scopes": ["https://www.googleapis.com/auth/calendar"]
-  },
   "content_scripts": [{
     "matches": ["https://us.prairielearn.com/*"],
     "js": ["prairielearn-adapter.js", "content.js"],
