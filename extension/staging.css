@@ -3,17 +3,18 @@
 body { margin: 0; }
 button { font: inherit; cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .5; }
-.topbar { display: flex; justify-content: space-between; gap: 28px; align-items: flex-start; padding: 28px max(24px, calc((100vw - 1120px) / 2)); border-bottom: 1px solid #dfe4e9; background: #fff; }
+.topbar { display: flex; justify-content: space-between; gap: 28px; align-items: flex-start; padding: 28px max(24px, calc((100vw - 1120px) / 2)); border-top: 5px solid #0065bd; border-bottom: 1px solid #dfe4e9; background: #fff; }
 main { max-width: 1120px; margin: 0 auto; padding: 20px 24px 48px; }
-.eyebrow { margin: 0 0 5px; color: #596b7d; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.eyebrow { margin: 0 0 5px; color: #0065bd; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 h1 { margin: 0 0 5px; font-size: 28px; letter-spacing: -.03em; }
 h2 { margin: 0 0 7px; font-size: 18px; }
 .muted { color: #607080; font-size: 13px; line-height: 1.45; }
 .auto-setting { display: block; margin-top: 12px; color: #405263; font-size: 12px; }
 .auto-setting input { margin-right: 6px; vertical-align: -1px; }
+.settings { display: grid; gap: 4px; }
 .top-actions { display: grid; min-width: 280px; gap: 8px; }
 .primary, .secondary { border-radius: 8px; padding: 10px 13px; font-weight: 700; }
-.primary { border: 0; background: #1f6feb; color: white; }
+.primary { border: 0; background: #0065bd; color: white; }
 .secondary { border: 1px solid #c8d0d9; background: white; color: #243444; }
 .text-button { border: 0; background: transparent; color: #6a3fb5; font-size: 12px; }
 .summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
@@ -39,6 +40,8 @@ h2 { margin: 0 0 7px; font-size: 18px; }
 .assignment-actions { display: flex; align-items: center; gap: 9px; }
 .assignment-actions a, .edit-due { color: #1f6feb; font-size: 12px; }
 .edit-due { border: 0; background: transparent; color: #6a3fb5; }
+.sync-action--synced,
+.sync-action--synced:disabled { border: 0; background: transparent; box-shadow: none; color: #7fe0ad; font-size: 11px; font-weight: 600; opacity: 1; }
 .empty { padding: 42px; border: 1px dashed #c8d0d9; border-radius: 10px; color: #607080; text-align: center; }
 dialog { max-width: 520px; border: 0; border-radius: 12px; padding: 0; box-shadow: 0 20px 70px #17202a33; }
 dialog::backdrop { background: #17202a66; }

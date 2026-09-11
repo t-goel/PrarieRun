@@ -6,11 +6,14 @@
       <p class="eyebrow">PrairieRun</p>
       <h1>Assignment calendar</h1>
       <p id="context" class="muted">Checking the active PrairieLearn page…</p>
+      <div class="settings-card">
+        <label><input id="show-undated" type="checkbox" /> Show undated assignments</label>
+        <label><input id="auto-add" type="checkbox" /> Automatically sync new assignments</label>
+      </div>
       <button id="scan" class="primary">Scan all classes</button>
-      <p id="status" class="status" role="status">Ready.</p>
-      <div class="stats"><div><strong id="new-count">0</strong><span>new or changed</span></div><div><strong id="staged-count">0</strong><span>staged total</span></div></div>
+      <button id="reset-data" class="secondary">Clear test data</button>
       <p class="muted small">Assignments appear directly below your PrairieLearn course links.</p>
     </main>
-    <script src="popup.js"></script>
+    <script src="view-utils.js"></script><script src="popup.js"></script>
   </body>
 </html>

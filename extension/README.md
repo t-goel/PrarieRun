@@ -9,8 +9,10 @@
 - Merges base assessments and numbered assessment instances.
 - Stores assignments locally in Chrome.
 - Shows a compact staging area grouped by class.
-- Selects only new/changed assignments with due dates by default.
-- Keeps missing-date assignments visible but excluded from bulk selection.
+- Shows assignments due today or later; older assignments remain untouched in Google Calendar.
+- Sorts incomplete assignments first and puts completed assignments in a dropdown.
+- Keeps undated assignments hidden by default, with an extension setting to reveal them.
+- Shows a green `✓ Synced` state and per-assignment sync buttons when automatic sync is disabled.
 - Lets the user add or edit a due date in customized staging mode.
 - Previews one-hour calendar blocks ending at the due time.
 

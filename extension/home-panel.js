@@ -4,30 +4,26 @@
   const SETTINGS_KEY = "prairierunSettings";
   const ASSIGNMENTS_KEY = "prairierunAssignments";
   let assignments = [];
-  let settings = { autoAddToCalendar: true };
+  let settings = { autoAddToCalendar: true, showUndatedAssignments: false };
   let panel;
 
   function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;"); }
   function dueLabel(item) { return item.dueAtLocal ? `${item.dueAtLocal}${item.timezone ? ` (${item.timezone})` : ""}` : "No due date"; }
-  function isCollapsed(item) {
-    if (item.syncState === "synced") return true;
-    if (!item.dueAtLocal && item.completionStatus && !["new", "changed", "error"].includes(item.syncState)) return true;
-    if (item.completionStatus === "unknown" && !["new", "changed", "error"].includes(item.syncState)) return true;
-    return false;
-  }
-  function isActionable(item) { return !isCollapsed(item) && ["new", "changed", "error"].includes(item.syncState); }
-  function selectable() { return assignments.filter((item) => item.selected && isActionable(item) && item.dueAtLocal); }
+  function isActionable(item) { return PrairieRunView.isPending(item) && Boolean(item.dueAtLocal); }
+  function visibleAssignments() { return assignments.filter((item) => PrairieRunView.displayable(item, settings.showUndatedAssignments)); }
+  function selectable() { return visibleAssignments().filter((item) => item.selected && isActionable(item) && item.dueAtLocal); }
 
   function rowMarkup(item) {
-    const status = item.syncState === "changed" ? "Changed" : item.syncState === "new" ? "New" : item.syncState === "error" ? "Error" : "Synced";
+    const status = PrairieRunView.statusLabel(item);
     const completion = item.manualCompletionStatus || item.completionStatus || "unknown";
     const checkbox = isActionable(item)
       ? `<input class="prr-check" type="checkbox" data-id="${escapeHtml(item.id)}" ${item.selected ? "checked" : ""} aria-label="Select ${escapeHtml(item.title)}" />`
       : `<span class="prr-check-spacer"></span>`;
+    const syncBadge = item.syncState === "synced" ? "" : `<span class="prr-sync">${escapeHtml(status)}</span>`;
     return `<li class="list-group-item prr-row">
       <div class="prr-row-main">${checkbox}<div>
         <a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(item.title || "Untitled assignment")}</a>
-        <div class="prr-meta text-muted">${escapeHtml(status)} · ${escapeHtml(completion)} · ${escapeHtml(dueLabel(item))}${item.score != null ? ` · ${item.score}%` : ""}</div>
+        <div class="prr-meta text-muted">${syncBadge}${syncBadge ? " " : ""}<span>${escapeHtml(completion)}</span> <span>${escapeHtml(dueLabel(item))}</span>${item.score != null ? ` <span>${item.score}%</span>` : ""}</div>
       </div></div>
       <div class="prr-actions">
         <select class="prr-select" data-completion-id="${escapeHtml(item.id)}" aria-label="Completion status for ${escapeHtml(item.title)}">
@@ -42,22 +38,23 @@
   }
 
   function listMarkup() {
-    if (!assignments.length) return `<li class="list-group-item text-muted">No assignments found yet.</li>`;
+    const current = visibleAssignments().sort((a, b) => Number(PrairieRunView.isCompleted(a)) - Number(PrairieRunView.isCompleted(b)) || PrairieRunView.compareAssignments(a, b));
+    if (!current.length) return `<li class="list-group-item text-muted">No assignments due today or later. Scan PrairieLearn to refresh.</li>`;
     const groups = new Map();
-    assignments.forEach((item) => { const key = item.courseInstanceId || item.courseName || "Unknown class"; if (!groups.has(key)) groups.set(key, { name: item.courseName || key, items: [] }); groups.get(key).items.push(item); });
+    current.forEach((item) => { const key = item.courseInstanceId || item.courseName || "Unknown class"; if (!groups.has(key)) groups.set(key, { name: item.courseName || key, items: [] }); groups.get(key).items.push(item); });
     return [...groups.values()].map((group) => {
-      const visible = group.items.filter((item) => !isCollapsed(item));
-      const collapsed = group.items.filter(isCollapsed);
-      const collapsedBlock = collapsed.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${collapsed.length} previous or unknown assignment${collapsed.length === 1 ? "" : "s"}</summary><ul class="list-group list-group-flush">${collapsed.map(rowMarkup).join("")}</ul></details></li>` : "";
-      return `<li class="list-group-item prr-group-header">${escapeHtml(group.name)}</li>${visible.map(rowMarkup).join("")}${collapsedBlock}`;
+      const incomplete = group.items.filter((item) => !PrairieRunView.isCompleted(item));
+      const completed = group.items.filter(PrairieRunView.isCompleted);
+      const completedBlock = completed.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${completed.length} completed assignment${completed.length === 1 ? "" : "s"}</summary><ul class="list-group list-group-flush">${completed.map(rowMarkup).join("")}</ul></details></li>` : "";
+      return `<li class="list-group-item prr-group-header">${escapeHtml(group.name)}</li>${incomplete.map(rowMarkup).join("")}${completedBlock}`;
     }).join("");
   }
 
   function render() {
     if (!panel) return;
-    panel.querySelector(".prr-count").textContent = `${assignments.length} assignment${assignments.length === 1 ? "" : "s"}`;
-    panel.querySelector("#prr-auto-add").checked = settings.autoAddToCalendar !== false;
-    panel.querySelector("#prr-quick-add").disabled = !selectable().length;
+    const current = visibleAssignments();
+    panel.querySelector(".prr-count").textContent = `${current.length} current assignment${current.length === 1 ? "" : "s"}`;
+    panel.querySelector("#prr-show-undated").checked = settings.showUndatedAssignments === true;
     panel.querySelector(".prr-list").innerHTML = listMarkup();
     panel.querySelectorAll("input.prr-check").forEach((input) => input.addEventListener("change", async () => { const item = assignments.find((entry) => entry.id === input.dataset.id); if (item) item.selected = input.checked; await persist(); }));
     panel.querySelectorAll("button[data-edit-id]").forEach((button) => button.addEventListener("click", () => editDueDate(button.dataset.editId)));
@@ -69,6 +66,7 @@
       if (item.dueAtLocal) item.selected = true;
       await persist();
     }));
+    updateSyncAction();
   }
 
   async function persist() { await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments }); render(); }
@@ -87,13 +85,13 @@
     await persist();
   }
 
-  function exportSelected() {
-    const selected = selectable();
+  function exportSelected(singleId = null) {
+    const selected = singleId ? assignments.filter((item) => item.id === singleId && isActionable(item) && item.dueAtLocal) : selectable();
     if (!selected.length) return;
-    const button = panel.querySelector("#prr-quick-add");
+    const button = panel.querySelector("#prr-sync-action");
     button.disabled = true; button.textContent = "Connecting…";
     chrome.runtime.sendMessage({ type: "PRAIRIERUN_EXPORT_SELECTED", assignments: selected }, (response) => {
-      button.textContent = "Quick add selected";
+      button.textContent = "Sync selected";
       if (chrome.runtime.lastError || !response?.ok) { alert(response?.error || chrome.runtime.lastError?.message || "Calendar export failed."); render(); return; }
       assignments = response.assignments || assignments;
       render();
@@ -105,6 +103,17 @@
     });
   }
 
+  function updateSyncAction() {
+    const button = panel.querySelector("#prr-sync-action");
+    const dated = visibleAssignments().filter((item) => item.dueAtLocal);
+    const allSynced = dated.length > 0 && dated.every((item) => item.syncState === "synced");
+    const selected = selectable();
+    button.classList.toggle("prr-sync-action--synced", allSynced);
+    button.disabled = allSynced || !selected.length;
+    button.textContent = allSynced ? "✓ Synced" : selected.length ? "Sync selected" : "Needs sync";
+    button.setAttribute("aria-label", allSynced ? "All current assignments are synced" : "Sync selected assignments");
+  }
+
   function buildPanel() {
     const built = document.createElement("div");
     built.id = PANEL_ID;
@@ -112,13 +121,13 @@
     built.innerHTML = `<div class="card-header bg-primary text-white prr-header">
       <span>PrairieRun <span class="prr-count"></span></span>
       <div class="prr-header-controls">
-        <label class="prr-auto-add-label"><input type="checkbox" id="prr-auto-add" /> Auto-add</label>
-        <button type="button" class="btn btn-light btn-sm" id="prr-quick-add" disabled>Quick add selected</button>
+        <label class="prr-auto-add-label"><input type="checkbox" id="prr-show-undated" /> Undated</label>
+        <button type="button" class="btn btn-light btn-sm prr-sync-action" id="prr-sync-action" disabled>Needs sync</button>
       </div>
     </div>
     <ul class="list-group list-group-flush prr-list"></ul>`;
-    built.querySelector("#prr-auto-add").addEventListener("change", async (event) => { settings.autoAddToCalendar = event.target.checked; await chrome.storage.local.set({ [SETTINGS_KEY]: settings }); });
-    built.querySelector("#prr-quick-add").addEventListener("click", exportSelected);
+    built.querySelector("#prr-show-undated").addEventListener("change", async (event) => { settings.showUndatedAssignments = event.target.checked; await chrome.storage.local.set({ [SETTINGS_KEY]: settings }); render(); });
+    built.querySelector("#prr-sync-action").addEventListener("click", () => exportSelected());
     return built;
   }
 
@@ -148,6 +157,12 @@
   }
 
   function update(nextAssignments) { assignments = nextAssignments || assignments; if (panel) render(); }
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !changes[SETTINGS_KEY]) return;
+    settings = { ...settings, ...(changes[SETTINGS_KEY].newValue || {}) };
+    render();
+  });
 
   window.PrairieRunHomePanel = { mount, update };
 })();

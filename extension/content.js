@@ -1,4 +1,5 @@
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  console.log("[PrairieRun] Content script received message", message?.type);
   if (message?.type === "PRAIRIERUN_HOME_SCAN_RESULT") {
     window.PrairieRunHomePanel?.update(message.assignments || []);
     return false;
@@ -24,6 +25,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 if (window.PrairieLearnAdapter?.pageType(location.href, document.title) === "home") {
+  console.log("[PrairieRun] PrairieLearn home content script ready", location.href);
   window.PrairieRunHomePanel?.mount();
   chrome.runtime.sendMessage({ type: "PRAIRIERUN_HOME_READY", url: location.href }).catch(() => undefined);
 }
