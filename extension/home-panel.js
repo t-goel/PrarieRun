@@ -16,7 +16,7 @@
     const syncBadge = item.syncState === "synced" ? "" : `<span class="prr-sync">${escapeHtml(status)}</span>`;
     const score = Number(item.score);
     const progress = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : null;
-    const progressBadge = progress === null ? "" : `<span class="prr-progress" aria-label="${progress}% complete"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="prr-progress__track" cx="18" cy="18" r="15" pathLength="100"></circle><circle class="prr-progress__arc" cx="18" cy="18" r="15" pathLength="100" stroke-dasharray="${progress} 100"></circle></svg><span class="prr-progress__value">${Math.round(progress)}</span></span>`;
+    const progressBadge = progress === null ? "" : `<span class="prr-progress" aria-label="${progress}% complete"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="prr-progress__track" cx="18" cy="18" r="15" pathLength="100"></circle><circle class="prr-progress__arc${progress === 0 ? " prr-progress__arc--empty" : ""}" cx="18" cy="18" r="15" pathLength="100" stroke-dasharray="${progress} 100"></circle></svg><span class="prr-progress__value">${Math.round(progress)}</span></span>`;
     return `<li class="list-group-item prr-row">
       <div class="prr-row-main"><div>
         <a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(item.title || "Untitled assignment")}</a>
