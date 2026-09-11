@@ -10,6 +10,11 @@ function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;")
 function dueLabel(item) { return item.dueAtLocal ? `${item.dueAtLocal}${item.timezone ? ` (${item.timezone})` : ""}` : "No due date"; }
 function selectedAssignments() { return assignments.filter((item) => item.selected); }
 function courseAssignments(courseKey) { return assignments.filter((item) => (item.courseInstanceId || item.courseName || "Unknown class") === courseKey); }
+function isCollapsedAssignment(item) {
+  if (item.syncState === "synced") return true;
+  if (item.completionStatus === "unknown" && !["new", "changed", "error"].includes(item.syncState)) return true;
+  return false;
+}
 
 function renderAssignment(item) {
   const status = item.syncState === "changed" ? "Changed" : item.syncState === "new" ? "New" : item.syncState === "stale" ? "Stale" : item.syncState === "error" ? "Error" : "Synced";
@@ -32,7 +37,10 @@ function render() {
   assignments.forEach((item) => { const key = item.courseInstanceId || item.courseName || "Unknown class"; if (!groups.has(key)) groups.set(key, { name: item.courseName || key, items: [] }); groups.get(key).items.push(item); });
   listElement.innerHTML = [...groups.values()].map((group) => {
     const courseKey = group.items[0].courseInstanceId || group.items[0].courseName || "Unknown class";
-    return `<section class="course"><div class="course-header"><span class="course-name">${escapeHtml(group.name)}</span><span class="course-meta">${group.items.length} assignment${group.items.length === 1 ? "" : "s"} <button class="course-select" data-course-action="select" data-course-key="${escapeHtml(courseKey)}">Select</button><button class="course-select" data-course-action="deselect" data-course-key="${escapeHtml(courseKey)}">Deselect</button></span></div>${group.items.map(renderAssignment).join("")}</section>`;
+    const visible = group.items.filter((item) => !isCollapsedAssignment(item));
+    const collapsed = group.items.filter(isCollapsedAssignment);
+    const collapsedBlock = collapsed.length ? `<details class="collapsed-assignments"><summary>Show ${collapsed.length} previous or unknown assignment${collapsed.length === 1 ? "" : "s"}</summary>${collapsed.map(renderAssignment).join("")}</details>` : "";
+    return `<section class="course"><div class="course-header"><span class="course-name">${escapeHtml(group.name)}</span><span class="course-meta">${group.items.length} assignment${group.items.length === 1 ? "" : "s"} <button class="course-select" data-course-action="select" data-course-key="${escapeHtml(courseKey)}">Select</button><button class="course-select" data-course-action="deselect" data-course-key="${escapeHtml(courseKey)}">Deselect</button></span></div>${visible.map(renderAssignment).join("")}${collapsedBlock}</section>`;
   }).join("");
   listElement.querySelectorAll("input[data-id]").forEach((input) => input.addEventListener("change", async () => { const item = assignments.find((entry) => entry.id === input.dataset.id); if (item) item.selected = input.checked; await persist(); }));
   listElement.querySelectorAll("button[data-edit-id]").forEach((button) => button.addEventListener("click", () => editDueDate(button.dataset.editId)));
