@@ -5,12 +5,6 @@
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   }
 
-  function currentDateKeys(now = new Date()) {
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return new Set([dateKey(now), dateKey(tomorrow)]);
-  }
-
   function dueDateKey(item) {
     const match = String(item?.dueAtLocal || "").match(/^(\d{4}-\d{2}-\d{2})/);
     return match?.[1] || null;
@@ -23,10 +17,6 @@
 
   function isCompleted(item) {
     return (item?.completionStatus || "unknown") === "completed";
-  }
-
-  function isPending(item) {
-    return ["new", "changed", "error"].includes(item?.syncState);
   }
 
   function displayable(item, showUndated, now = new Date()) {
@@ -47,7 +37,7 @@
             : "Not synced";
   }
 
-  const api = { currentDateKeys, dueDateKey, isCurrent, isCompleted, isPending, displayable, compareAssignments, statusLabel };
+  const api = { dueDateKey, isCurrent, isCompleted, displayable, compareAssignments, statusLabel };
   globalThis.PrairieRunView = api;
   if (typeof module !== "undefined") module.exports = api;
 })();
