@@ -2,6 +2,7 @@ const ASSIGNMENTS_KEY = "prairierunAssignments";
 const SYNC_KEY = "prairierunSyncStatus";
 const SETTINGS_KEY = "prairierunSettings";
 const defaultSettings = { prairieLearnOrigin: "https://us.prairielearn.com", completionThreshold: 95, defaultReminderMinutes: 10 };
+let scanInFlight = false;
 
 async function getSettings() {
   const stored = await chrome.storage.local.get(SETTINGS_KEY);
@@ -81,6 +82,7 @@ async function startScan(sourceTabId) {
   if (home.pageType !== "home") throw new Error("Open the PrairieLearn home page or a class assessment page before scanning.");
   const settings = await getSettings();
   const courseLinks = (home.courseLinks || []).filter((link) => link.href?.startsWith(settings.prairieLearnOrigin));
+  if (!courseLinks.length) throw new Error("No PrairieLearn classes were found. Confirm that you are logged in.");
   const allAssignments = [];
   for (let index = 0; index < courseLinks.length; index += 1) {
     const url = `${courseLinks[index].href.replace(/\/$/, "")}/assessments`;
@@ -93,9 +95,36 @@ async function startScan(sourceTabId) {
   return result;
 }
 
+async function openStagingArea() {
+  const stagingUrl = chrome.runtime.getURL("staging.html");
+  const existing = await chrome.tabs.query({ url: `${stagingUrl}*` });
+  if (existing[0]?.id) {
+    await chrome.tabs.update(existing[0].id, { active: true });
+    return;
+  }
+  await chrome.tabs.create({ url: stagingUrl, active: true });
+}
+
+async function runScan(sourceTabId, openWhenNew) {
+  if (scanInFlight) return { assignments: [], skipped: true };
+  scanInFlight = true;
+  try {
+    const assignments = await startScan(sourceTabId);
+    const newOrChanged = assignments.filter((item) => ["new", "changed"].includes(item.syncState));
+    if (openWhenNew && newOrChanged.length) await openStagingArea();
+    return { assignments, newOrChanged };
+  } finally {
+    scanInFlight = false;
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "PRAIRIERUN_START_SCAN") {
-    startScan(message.tabId || sender.tab?.id).then((items) => sendResponse({ ok: true, count: items.length })).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); sendResponse({ ok: false, error: error.message }); });
+    runScan(message.tabId || sender.tab?.id, false).then((result) => sendResponse({ ok: true, count: result.assignments.length })).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); sendResponse({ ok: false, error: error.message }); });
+    return true;
+  }
+  if (message?.type === "PRAIRIERUN_HOME_READY" && sender.tab?.id) {
+    runScan(sender.tab.id, true).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); });
     return true;
   }
   if (message?.type === "PRAIRIERUN_GET_STATE") {

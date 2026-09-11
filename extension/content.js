@@ -18,3 +18,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   return true;
 });
+
+if (window.PrairieLearnAdapter?.pageType(location.href, document.title) === "home") {
+  chrome.runtime.sendMessage({ type: "PRAIRIERUN_HOME_READY", url: location.href }).catch(() => undefined);
+}
