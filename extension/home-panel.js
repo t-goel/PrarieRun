@@ -96,8 +96,8 @@
     built.innerHTML = `<div class="card-header bg-primary text-white prr-header">
       <span>PrairieRun <span class="prr-count"></span></span>
       <div class="prr-header-controls">
-        <button type="button" class="btn btn-outline-light btn-sm" id="prr-view-toggle">List in order</button>
         <button type="button" class="btn btn-outline-light btn-sm" id="prr-show-undated">Show undated</button>
+        <button type="button" class="btn btn-outline-light btn-sm" id="prr-view-toggle">List in order</button>
       </div>
     </div>
     <ul class="list-group list-group-flush prr-list"></ul>`;
