@@ -1,6 +1,7 @@
 const ASSIGNMENTS_KEY = "prairierunAssignments";
 const SYNC_KEY = "prairierunSyncStatus";
 const SETTINGS_KEY = "prairierunSettings";
+const CALENDAR_SYNC_KEY = "prairierunCalendarSync";
 const defaultSettings = { prairieLearnOrigin: "https://us.prairielearn.com", completionThreshold: 95, defaultReminderMinutes: 10, autoAddToCalendar: true };
 let scanInFlight = false;
 
@@ -9,9 +10,9 @@ async function getSettings() {
   return { ...defaultSettings, ...(stored[SETTINGS_KEY] || {}) };
 }
 
-function normalizeStoredAssignment(assignment, existing, now) {
-  const previousSourceCompletion = existing?.sourceCompletionStatus || existing?.completionStatus;
-  const completionChanged = Boolean(existing && assignment.completionStatus && previousSourceCompletion && previousSourceCompletion !== assignment.completionStatus);
+function normalizeStoredAssignment(assignment, existing, now, syncedCompletion) {
+  const referenceCompletion = syncedCompletion || existing?.sourceCompletionStatus || existing?.completionStatus;
+  const completionChanged = Boolean(existing && assignment.completionStatus && referenceCompletion && referenceCompletion !== assignment.completionStatus);
   const isNew = !existing;
   const changed = isNew || completionChanged;
   const manuallyEnteredDueAt = existing?.manuallyEnteredDueAt || null;
@@ -31,16 +32,18 @@ function normalizeStoredAssignment(assignment, existing, now) {
 }
 
 async function saveScanResult(assignments) {
-  const stored = await chrome.storage.local.get(ASSIGNMENTS_KEY);
+  const stored = await chrome.storage.local.get([ASSIGNMENTS_KEY, CALENDAR_SYNC_KEY]);
   const previous = new Map((stored[ASSIGNMENTS_KEY] || []).map((item) => [item.id, item]));
+  const calendarSync = stored[CALENDAR_SYNC_KEY] || {};
   const now = new Date().toISOString();
   const detectedIds = new Set();
   const merged = assignments.map((item) => {
     const existing = previous.get(item.id);
-    const previousSourceCompletion = existing?.sourceCompletionStatus || existing?.completionStatus;
-    const completionChanged = Boolean(existing && item.completionStatus && previousSourceCompletion && previousSourceCompletion !== item.completionStatus);
+    const syncedCompletion = calendarSync[item.id]?.completionStatus;
+    const referenceCompletion = syncedCompletion || existing?.sourceCompletionStatus || existing?.completionStatus;
+    const completionChanged = Boolean(existing && item.completionStatus && referenceCompletion && referenceCompletion !== item.completionStatus);
     if (!existing || completionChanged) detectedIds.add(item.id);
-    return normalizeStoredAssignment(item, existing, now);
+    return normalizeStoredAssignment(item, existing, now, syncedCompletion);
   });
   const scannedIds = new Set(merged.map((item) => item.id));
   const stale = (stored[ASSIGNMENTS_KEY] || []).filter((item) => !scannedIds.has(item.id)).map((item) => ({ ...item, syncState: "stale", selected: false }));
