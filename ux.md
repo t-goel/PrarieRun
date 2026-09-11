@@ -2,29 +2,27 @@
 
 ## Implementation audit: dead-code and cleanup candidates
 
-This audit records implementation findings without changing or removing source
-files. The current product surface is the PrairieLearn home-page panel plus the
-extension popup. The standalone staging page is not linked by the current
-manifest, popup, content script, or background service worker.
+This audit records implementation findings after the cleanup completed on
+2026-09-11. The current product surface is the PrairieLearn home-page panel plus
+the extension popup. The standalone staging page was not linked by the current
+manifest, popup, content script, or background service worker, and has now been
+removed.
 
 ### UX code that is no longer represented in the current product
 
 - `extension/staging.html`, `extension/staging.js`, and `extension/staging.css`
-  implement the former standalone staging page. They are not reachable from the
-  current UI and duplicate the home-page panel's assignment rendering and due
-  date editing. Treat them as removal candidates after the embedded panel has
-  passed the regression checklist in `cleanup plan.md`.
+  implemented the former standalone staging page. They were not reachable from
+  the current UI and duplicated the home-page panel's assignment rendering and
+  due date editing, so they have been removed.
 - The old per-assignment selection workflow is no longer part of the current
   UX. Source searches found no active checkboxes, selected-assignment export,
   “deselect all,” or manual sync controls in the extension. Historical planning
   text in this file and the stage documents should be treated as design history,
   not as current requirements.
-- The popup stylesheet still contains `.stats` rules, although the current
-  popup has no `.stats` markup. The popup script also retains a fallback for a
-  missing `#status` element; the current popup uses `#context` instead.
-- The home-panel stylesheet contains `.prr-sync--done`, which has no current
-  markup, and `.prr-check-spacer`, a zero-width layout placeholder left from the
-  removed checkbox design.
+- The popup stylesheet's obsolete `.stats` rules and the unreachable `#status`
+  fallback have been removed. The popup now uses `#context` consistently.
+- The home-panel stylesheet's obsolete `.prr-sync--done` and
+  `.prr-check-spacer` rules have been removed.
 
 ### UX behavior that must be preserved during cleanup
 
@@ -40,7 +38,7 @@ manifest, popup, content script, or background service worker.
   must not regress.
 
 See `systemdesign.md` for implementation evidence and `cleanup plan.md` for the
-ordered, non-executed removal plan.
+completed cleanup record.
 
 ## Product promise
 

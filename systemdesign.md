@@ -2,9 +2,10 @@
 
 ## Scope
 
-This is a read-only audit of the repository as it exists on 2026-09-11. No
-runtime source, manifest, test, or fixture files were changed for this audit.
-The authoritative cleanup work is listed in `cleanup plan.md`.
+This document reflects the repository after the cleanup completed on
+2026-09-11. The original audit findings are preserved below, with each item
+marked by its current disposition. The authoritative cleanup record is listed
+in `cleanup plan.md`.
 
 ## Current runtime architecture
 
@@ -33,18 +34,18 @@ manifest's content-script array.
 
 | Item | Evidence | Assessment | Proposed action |
 |---|---|---|---|
-| `extension/staging.html` | No manifest entry, popup link, background tab creation, or current UI link references it | Dead/unreachable legacy UI | Remove with the staging module after validation |
-| `extension/staging.js` | Only loaded by `staging.html`; duplicates home-panel rendering/edit behavior | Dead as part of the current product path | Remove with `staging.html` |
-| `extension/staging.css` | Only referenced by `staging.html` | Dead if the legacy page is removed | Remove with the staging page |
-| `PrairieRunView.currentDateKeys` | Exported but no call sites found | Unused helper | Remove from the module and export |
-| `PrairieRunView.isPending` | Exported but no call sites found after selection removal | Unused helper | Remove from the module and export |
+| `extension/staging.html` | No manifest entry, popup link, background tab creation, or current UI link referenced it | Dead/unreachable legacy UI | Removed |
+| `extension/staging.js` | Only loaded by `staging.html`; duplicated home-panel rendering/edit behavior | Dead as part of the current product path | Removed |
+| `extension/staging.css` | Only referenced by `staging.html` | Dead with the legacy page removed | Removed |
+| `PrairieRunView.currentDateKeys` | Exported but no call sites found | Unused helper | Removed |
+| `PrairieRunView.isPending` | Exported but no call sites found after selection removal | Unused helper | Removed |
 | `PrairieRunView.statusLabel` | Called by `home-panel.js` for unsynced/error badges | Live helper | Retain |
-| `runScan` parameter `openWhenNew` | Passed by callers and logged, but never controls behavior | Dead parameter | Remove parameter and related logging |
-| `runScan` result field `newOrChanged` | Constructed and returned; callers use only `assignments` or ignore the result | Dead result data | Remove the local calculation and returned field |
-| `home-panel.css` `.prr-sync--done` | No matching current markup | Dead style | Remove |
-| `home-panel.css` `.prr-check-spacer` | Only a zero-width placeholder from the removed checkbox layout | Obsolete layout shim | Remove markup and rule if layout remains unchanged |
-| `popup.css` `.stats*` rules | No `.stats` markup in current `popup.html` | Dead styles | Remove |
-| `popup.js` `#status` branch | Current popup has `#context`, not `#status` | Defensive branch with no current DOM target | Simplify after confirming no alternate popup is shipped |
+| `runScan` parameter `openWhenNew` | Passed by callers and logged, but never controlled behavior | Dead parameter | Removed |
+| `runScan` result field `newOrChanged` | Constructed and returned; callers used only `assignments` or ignored the result | Dead result data | Removed |
+| `home-panel.css` `.prr-sync--done` | No matching current markup | Dead style | Removed |
+| `home-panel.css` `.prr-check-spacer` | Only a zero-width placeholder from the removed checkbox layout | Obsolete layout shim | Removed with spacer markup |
+| `popup.css` `.stats*` rules | No `.stats` markup in current `popup.html` | Dead styles | Removed |
+| `popup.js` `#status` branch | Current popup has `#context`, not `#status` | Defensive branch with no current DOM target | Removed; `#context` is used consistently |
 | `extension/prairielearn-adapter.js` and `stage0/prairielearn-adapter.js` | Two parser implementations exist; one is runtime and one is test-only | Duplication risk, not immediately dead | Consolidate around one canonical parser/test boundary |
 | `extension/README.md` and `extension/google-calendar-setup.md` | Describe the former staging/export-preview workflow | Documentation drift | Update or consolidate; do not treat as runtime dead code |
 
@@ -60,12 +61,12 @@ manifest's content-script array.
   staging page is removed; only its unused exports should be reconsidered.
 - `stage0/test-adapter-core.js`, `stage0/test-capture-bundle.js`, the capture
   JSON fixture, and `capture-helper/`: development/testing assets. They are not
-  shipped runtime code. The capture bundle test currently has a fixture/test
-  mismatch, so it should be repaired or explicitly retired before removal.
+  shipped runtime code. The capture bundle test has been aligned with the
+  current one-course fixture.
 
 ## Historical documentation
 
 `stage-0.md` through `stage-3.md` and portions of `ux.md` contain historical
 planning language for staging, selection, and manual export. They are not code
-dependencies. Consolidation or archival is safe only after the current behavior
-is represented in the system design and the cleanup checklist is completed.
+dependencies. Consolidation or archival remains optional now that current
+behavior is represented in the system design and cleanup checklist.
