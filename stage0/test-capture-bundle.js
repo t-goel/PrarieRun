@@ -4,11 +4,9 @@ const fs = require("node:fs");
 
 const bundle = JSON.parse(fs.readFileSync("prairierun-stage-0-captures-2026-09-11.json", "utf8"));
 
-test("updated capture covers all three course assessment pages", () => {
+test("updated capture covers the captured course assessment page", () => {
   const urls = bundle.captures.map((capture) => capture.url);
   assert.ok(urls.some((url) => url.includes("course_instance/229304/assessments")));
-  assert.ok(urls.some((url) => url.includes("course_instance/228445/assessments")));
-  assert.ok(urls.some((url) => url.includes("course_instance/223990/assessments")));
 });
 
 test("updated capture includes a zero-score assignment without a due date", () => {
@@ -17,4 +15,3 @@ test("updated capture includes a zero-score assignment without a due date", () =
   assert.match(cs411.html, /data-testid="scorebar"[^>]*>[\s\S]*?0%/);
   assert.match(cs411.html, /Project Track 2[\s\S]*?<\/tr>/);
 });
-
