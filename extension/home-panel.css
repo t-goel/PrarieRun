@@ -10,7 +10,7 @@
 #prairierun-home-panel .prr-course-tag { color: #6c757d; font-size: .72rem; }
 #prairierun-home-panel .prr-ghost-toggle { border: 1px solid transparent; background: transparent; color: #fff; }
 #prairierun-home-panel .prr-ghost-toggle:hover,
-#prairierun-home-panel .prr-ghost-toggle:focus-visible { border-color: rgba(255,255,255,.85); color: #fff; }
+#prairierun-home-panel .prr-ghost-toggle:focus-visible { border-color: transparent; color: #fff; }
 #prairierun-home-panel .prr-ghost-toggle.prr-toggle--active { border-color: #fff; background: #fff; color: #1769aa; }
 #prairierun-home-panel .prr-actions { display: flex; align-items: center; gap: .5rem; }
 #prairierun-home-panel .prr-collapsed summary { cursor: pointer; }
