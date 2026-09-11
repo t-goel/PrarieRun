@@ -61,7 +61,9 @@
     const current = visibleAssignments();
     panel.querySelector(".prr-count").textContent = `${current.length} current assignment${current.length === 1 ? "" : "s"}`;
     panel.querySelector("#prr-view-toggle").textContent = settings.assignmentView === "ordered" ? "List by class" : "List in order";
-    panel.querySelector("#prr-show-undated").textContent = settings.showUndatedAssignments ? "Hide undated" : "Show undated";
+    const undatedButton = panel.querySelector("#prr-show-undated");
+    undatedButton.textContent = settings.showUndatedAssignments ? "Hide undated" : "Show undated";
+    undatedButton.classList.toggle("prr-toggle--active", settings.showUndatedAssignments === true);
     panel.querySelector(".prr-list").innerHTML = listMarkup();
     panel.querySelectorAll("button[data-edit-id]").forEach((button) => button.addEventListener("click", () => editDueDate(button.dataset.editId)));
   }
@@ -96,7 +98,7 @@
     built.innerHTML = `<div class="card-header bg-primary text-white prr-header">
       <span>PrairieRun <span class="prr-count"></span></span>
       <div class="prr-header-controls">
-        <button type="button" class="btn btn-outline-light btn-sm" id="prr-show-undated">Show undated</button>
+        <button type="button" class="btn btn-sm prr-ghost-toggle" id="prr-show-undated">Show undated</button>
         <button type="button" class="btn btn-outline-light btn-sm" id="prr-view-toggle">List in order</button>
       </div>
     </div>
