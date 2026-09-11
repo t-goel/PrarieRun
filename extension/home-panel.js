@@ -60,7 +60,9 @@
     if (!panel) return;
     const current = visibleAssignments();
     panel.querySelector(".prr-count").textContent = `${current.length} current assignment${current.length === 1 ? "" : "s"}`;
-    panel.querySelector("#prr-view-toggle").textContent = settings.assignmentView === "ordered" ? "List by class" : "List in order";
+    const viewToggle = panel.querySelector("#prr-view-toggle");
+    viewToggle.classList.toggle("prr-view-switch--ordered", settings.assignmentView === "ordered");
+    viewToggle.setAttribute("aria-label", settings.assignmentView === "ordered" ? "Showing assignments by due date" : "Showing assignments by class");
     const undatedButton = panel.querySelector("#prr-show-undated");
     undatedButton.textContent = settings.showUndatedAssignments ? "Hide undated" : "Show undated";
     undatedButton.classList.toggle("prr-toggle--active", settings.showUndatedAssignments === true);
@@ -99,7 +101,7 @@
       <span>PrairieRun <span class="prr-count"></span></span>
       <div class="prr-header-controls">
         <button type="button" class="btn btn-sm prr-ghost-toggle" id="prr-show-undated">Show undated</button>
-        <button type="button" class="btn btn-outline-light btn-sm" id="prr-view-toggle">List in order</button>
+        <button type="button" class="prr-view-switch" id="prr-view-toggle" aria-label="Showing assignments by class"><span class="prr-view-switch__tab"></span><span class="prr-view-switch__label prr-view-switch__label--date">Due Date</span><span class="prr-view-switch__label prr-view-switch__label--class">By Class</span></button>
       </div>
     </div>
     <ul class="list-group list-group-flush prr-list"></ul>`;
