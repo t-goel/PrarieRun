@@ -168,4 +168,4 @@ async function exportAssignments(assignments) {
   return results;
 }
 
-window.PrairieRunCalendar = { exportAssignments };
+globalThis.PrairieRunCalendar = { exportAssignments };

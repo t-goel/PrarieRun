@@ -1,0 +1,15 @@
+#prairierun-home-panel { margin-top: 1.5rem; }
+#prairierun-home-panel .prr-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .75rem; }
+#prairierun-home-panel .prr-header-controls { display: flex; align-items: center; gap: 1rem; }
+#prairierun-home-panel .prr-auto-add-label { display: flex; align-items: center; gap: .35rem; margin: 0; font-size: .85rem; font-weight: normal; cursor: pointer; }
+#prairierun-home-panel .prr-count { font-weight: normal; font-size: .85rem; opacity: .85; }
+#prairierun-home-panel .prr-group-header { font-weight: 600; background: #f8f9fa; }
+#prairierun-home-panel .prr-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
+#prairierun-home-panel .prr-row-main { display: flex; align-items: flex-start; gap: .5rem; }
+#prairierun-home-panel .prr-check, #prairierun-home-panel .prr-check-spacer { margin-top: .2rem; width: 1rem; height: 1rem; flex: none; }
+#prairierun-home-panel .prr-meta { font-size: .78rem; margin-top: .1rem; }
+#prairierun-home-panel .prr-actions { display: flex; align-items: center; gap: .5rem; }
+#prairierun-home-panel .prr-select { font-size: .82rem; padding: .25rem .4rem; border: 1px solid #ced4da; border-radius: .25rem; background: #fff; }
+#prairierun-home-panel .prr-collapsed summary { cursor: pointer; }
+#prairierun-home-panel a { text-decoration: none; }
+#prairierun-home-panel a:hover { text-decoration: underline; }
