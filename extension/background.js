@@ -208,16 +208,15 @@ async function notifyHomeTab(tabId, assignments, detectedIds) {
   chrome.tabs.sendMessage(tabId, { type: "PRAIRIERUN_HOME_SCAN_RESULT", assignments, exportResults }).catch(() => undefined);
 }
 
-async function runScan(sourceTabId, openWhenNew) {
+async function runScan(sourceTabId) {
   if (scanInFlight) { debugLog("Scan ignored because another scan is already running"); return { assignments: [], skipped: true }; }
   scanInFlight = true;
-  debugLog("Scan lock acquired", { sourceTabId, openWhenNew });
+  debugLog("Scan lock acquired", { sourceTabId });
   try {
     const scan = await startScan(sourceTabId);
     const assignments = scan.merged;
-    const newOrChanged = assignments.filter((item) => scan.detectedIds.has(item.id));
     await notifyHomeTab(sourceTabId, assignments, scan.detectedIds);
-    return { assignments, newOrChanged };
+    return { assignments };
   } finally {
     scanInFlight = false;
     debugLog("Scan lock released");
@@ -227,12 +226,12 @@ async function runScan(sourceTabId, openWhenNew) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "PRAIRIERUN_START_SCAN") {
     debugLog("Popup requested scan", { tabId: message.tabId || sender.tab?.id });
-    runScan(message.tabId || sender.tab?.id, false).then((result) => sendResponse({ ok: true, count: result.assignments.length })).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); sendResponse({ ok: false, error: error.message }); });
+    runScan(message.tabId || sender.tab?.id).then((result) => sendResponse({ ok: true, count: result.assignments.length })).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); sendResponse({ ok: false, error: error.message }); });
     return true;
   }
   if (message?.type === "PRAIRIERUN_HOME_READY" && sender.tab?.id) {
     debugLog("PrairieLearn home reported ready", { tabId: sender.tab.id });
-    runScan(sender.tab.id, true).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); });
+    runScan(sender.tab.id).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); });
     return true;
   }
   if (message?.type === "PRAIRIERUN_ASSIGNMENT_UPDATED" && sender.tab?.id) {
