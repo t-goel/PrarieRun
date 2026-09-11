@@ -4,11 +4,9 @@
 #prairierun-home-panel .prr-count { font-weight: normal; font-size: .85rem; opacity: .85; }
 #prairierun-home-panel .prr-group-header { font-weight: 600; background: #f8f9fa; }
 #prairierun-home-panel .prr-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
-#prairierun-home-panel .prr-row-main { display: flex; align-items: flex-start; gap: .5rem; }
-#prairierun-home-panel .prr-check-spacer { width: 0; flex: none; }
+#prairierun-home-panel .prr-row-main { display: flex; align-items: flex-start; }
 #prairierun-home-panel .prr-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; font-size: .78rem; margin-top: .1rem; }
 #prairierun-home-panel .prr-sync { color: #6c757d; }
-#prairierun-home-panel .prr-sync--done { color: #198754; font-weight: 600; }
 #prairierun-home-panel .prr-actions { display: flex; align-items: center; gap: .5rem; }
 #prairierun-home-panel .prr-collapsed summary { cursor: pointer; }
 #prairierun-home-panel a { text-decoration: none; }
