@@ -16,3 +16,5 @@ https://www.googleapis.com/auth/calendar
 ```
 
 Do not commit client secrets or tokens. Chrome extension OAuth uses the public client ID; the user's Google password and refresh credentials must never be stored by PrairieRun.
+
+PrairieRun caches the temporary Google access token in Chrome's session storage and first attempts silent authorization. You normally should not be prompted on every export. The token expires periodically, so Google may still ask for authorization again after expiration, after clearing extension data, or if Brave blocks the Google sign-in session. In Brave, allow cookies for `accounts.google.com` and `googleapis.com` if prompts recur.

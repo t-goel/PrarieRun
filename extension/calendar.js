@@ -1,26 +1,36 @@
 const CALENDAR_MAPPINGS_KEY = "prairierunCalendarMappings";
 const CALENDAR_SYNC_KEY = "prairierunCalendarSync";
+const CALENDAR_TOKEN_KEY = "prairierunCalendarToken";
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 
 async function getCalendarToken() {
+  const cached = await chrome.storage.session.get(CALENDAR_TOKEN_KEY);
+  if (cached[CALENDAR_TOKEN_KEY]?.accessToken && cached[CALENDAR_TOKEN_KEY].expiresAt > Date.now() + 60_000) {
+    return cached[CALENDAR_TOKEN_KEY].accessToken;
+  }
   const redirectUri = chrome.identity.getRedirectURL("oauth2");
   const params = new URLSearchParams({
     client_id: "284599557855-m80j0r9kf52uou6n232ekslrrrpmdc9r.apps.googleusercontent.com",
     response_type: "token",
     redirect_uri: redirectUri,
     scope: "https://www.googleapis.com/auth/calendar",
-    prompt: "consent",
+    include_granted_scopes: "true",
   });
-  const responseUrl = await chrome.identity.launchWebAuthFlow({
-    url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
-    interactive: true,
-  });
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  let responseUrl;
+  try {
+    responseUrl = await chrome.identity.launchWebAuthFlow({ url, interactive: false });
+  } catch (_silentError) {
+    responseUrl = await chrome.identity.launchWebAuthFlow({ url, interactive: true });
+  }
   if (!responseUrl) throw new Error("Google authorization was cancelled.");
   const fragment = new URL(responseUrl).hash.slice(1);
   const result = new URLSearchParams(fragment);
   if (result.get("error")) throw new Error(`Google authorization failed: ${result.get("error_description") || result.get("error")}`);
   const token = result.get("access_token");
   if (!token) throw new Error("Google did not return an access token.");
+  const expiresIn = Number(result.get("expires_in")) || 3600;
+  await chrome.storage.session.set({ [CALENDAR_TOKEN_KEY]: { accessToken: token, expiresAt: Date.now() + expiresIn * 1000 } });
   return token;
 }
 
