@@ -17,7 +17,8 @@ test("scores map to the configured completion threshold", () => {
   assert.equal(adapter.parsePercentage("97%"), 97);
   assert.equal(adapter.parsePercentage("Not started"), null);
   assert.equal(adapter.completionFromScore(94.99), "incomplete");
-  assert.equal(adapter.completionFromScore(95), "completed");
+  assert.equal(adapter.completionFromScore(95), "incomplete");
+  assert.equal(adapter.completionFromScore(95.01), "completed");
   assert.equal(adapter.completionFromScore(null), "unknown");
 });
 
@@ -34,4 +35,3 @@ test("base labels and instance titles normalize to one assignment key", () => {
   assert.equal(adapter.normalizeInstanceTitle("The Relational Model instance #1"), "The Relational Model");
   assert.equal(adapter.stableAssignmentKey({ courseInstanceId: "229304", assessmentId: "2724861" }), "pl:229304:assessment:2724861");
 });
-

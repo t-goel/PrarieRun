@@ -189,7 +189,7 @@ If color support is limited, explain the behavior immediately beside the choice 
 
 ## Completion status
 
-During each scan, the extension checks assignment completion. An assignment is considered completed when PrairieLearn explicitly marks it complete or when its score is at least 95% by default.
+During each scan, the extension checks assignment completion. An assignment is considered completed when PrairieLearn explicitly marks it complete or when its score is strictly above 95% by default.
 
 In **Customize selection**, each assignment has a compact completion control:
 

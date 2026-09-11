@@ -1,6 +1,7 @@
 const CALENDAR_MAPPINGS_KEY = "prairierunCalendarMappings";
 const CALENDAR_SYNC_KEY = "prairierunCalendarSync";
 const CALENDAR_TOKEN_KEY = "prairierunCalendarToken";
+const CALENDAR_COLOR_KEY = "prairierunCalendarColors";
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 
 async function getCalendarToken() {
@@ -84,7 +85,7 @@ function eventDateTime(local, timezone) {
   return date.toISOString();
 }
 
-function eventResource(assignment, calendarId) {
+function eventResource(assignment, calendarId, colorId) {
   const end = eventDateTime(assignment.dueAtLocal, assignment.timezone);
   const endDate = new Date(end);
   const startDate = new Date(endDate.getTime() - 60 * 60 * 1000);
@@ -94,8 +95,30 @@ function eventResource(assignment, calendarId) {
     start: { dateTime: startDate.toISOString(), timeZone: "UTC" },
     end: { dateTime: endDate.toISOString(), timeZone: "UTC" },
     reminders: { useDefault: false, overrides: [{ method: "popup", minutes: 10 }] },
+    ...(colorId ? { colorId } : {}),
     extendedProperties: { private: { prairieRun: "1", assignmentId: assignment.id, sourceUrl: assignment.sourceUrl, calendarId } },
   };
+}
+
+function colorDistanceToGrey(color) {
+  const match = String(color || "").match(/^#([0-9a-f]{6})$/i);
+  if (!match) return Number.POSITIVE_INFINITY;
+  const values = [0, 2, 4].map((index) => parseInt(match[1].slice(index, index + 2), 16));
+  return Math.max(...values) - Math.min(...values);
+}
+
+async function getColorPlan(token, courseKeys) {
+  const stored = await chrome.storage.local.get(CALENDAR_COLOR_KEY);
+  const saved = stored[CALENDAR_COLOR_KEY] || {};
+  const colors = await calendarRequest("/colors", {}, token);
+  const eventColors = colors.event || {};
+  const colorIds = Object.keys(eventColors);
+  const greyColorId = colorIds.sort((a, b) => colorDistanceToGrey(eventColors[a].background) - colorDistanceToGrey(eventColors[b].background))[0];
+  const classColorIds = colorIds.filter((id) => id !== greyColorId);
+  const classColors = { ...saved.classColors };
+  courseKeys.forEach((key, index) => { if (!classColors[key] && classColorIds.length) classColors[key] = classColorIds[index % classColorIds.length]; });
+  await chrome.storage.local.set({ [CALENDAR_COLOR_KEY]: { classColors, greyColorId } });
+  return { classColors, greyColorId };
 }
 
 async function findMarkedEvent(assignment, calendarId, token) {
@@ -114,6 +137,8 @@ async function exportAssignments(assignments) {
   const mappings = stored[CALENDAR_MAPPINGS_KEY] || {};
   const sync = stored[CALENDAR_SYNC_KEY] || {};
   const results = [];
+  const courseKeys = [...new Set(assignments.map((assignment) => assignment.courseInstanceId || assignment.courseName))];
+  const colorPlan = await getColorPlan(token, courseKeys);
   for (const assignment of assignments) {
     if (!assignment.dueAtLocal) { results.push({ assignment, status: "skipped", reason: "Missing due date" }); continue; }
     try {
@@ -121,13 +146,19 @@ async function exportAssignments(assignments) {
       const calendar = mappings[courseKey] ? calendars.find((item) => item.id === mappings[courseKey]) : await getOrCreateClassCalendar(assignment.courseName, calendars, token);
       if (!calendar) throw new Error(`Could not find a calendar for ${assignment.courseName}.`);
       mappings[courseKey] = calendar.id;
-      const resource = eventResource(assignment, calendar.id);
+      const classColorId = colorPlan.classColors[courseKey];
       const known = sync[assignment.id];
       let event = known?.googleEventId ? { id: known.googleEventId } : await findMarkedEvent(assignment, calendar.id, token);
+      const colorId = assignment.completionStatus === "completed"
+        ? colorPlan.greyColorId
+        : assignment.completionStatus === "unknown" && event?.id
+          ? null
+          : classColorId;
+      const resource = eventResource(assignment, calendar.id, colorId);
       let status;
       if (event?.id) { await calendarRequest(`/calendars/${encodeURIComponent(calendar.id)}/events/${encodeURIComponent(event.id)}`, { method: "PATCH", body: JSON.stringify(resource) }, token); status = "updated"; }
       else { event = await calendarRequest(`/calendars/${encodeURIComponent(calendar.id)}/events`, { method: "POST", body: JSON.stringify(resource) }, token); status = "added"; }
-      sync[assignment.id] = { assignmentId: assignment.id, calendarId: calendar.id, googleEventId: event.id, lastSyncedAt: new Date().toISOString(), eventFingerprint: assignment.sourceFingerprint, syncStatus: "synced" };
+      sync[assignment.id] = { assignmentId: assignment.id, calendarId: calendar.id, googleEventId: event.id, lastSyncedAt: new Date().toISOString(), eventFingerprint: assignment.sourceFingerprint, completionStatus: assignment.completionStatus, syncStatus: "synced" };
       results.push({ assignment, calendar, status, eventId: event.id });
     } catch (error) {
       results.push({ assignment, status: "failed", reason: error?.message || "Unknown Calendar API error" });

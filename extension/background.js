@@ -11,15 +11,19 @@ async function getSettings() {
 
 function normalizeStoredAssignment(assignment, existing, now) {
   const scoreIncreased = existing?.score != null && assignment.score != null && assignment.score > existing.score;
-  const becameCompleted = existing?.completionStatus !== "completed" && assignment.completionStatus === "completed";
+  const previousSourceCompletion = existing?.sourceCompletionStatus || existing?.completionStatus;
+  const completionChanged = Boolean(existing && assignment.completionStatus && previousSourceCompletion && previousSourceCompletion !== assignment.completionStatus);
   const isNew = !existing;
-  const changed = isNew || scoreIncreased || becameCompleted;
+  const changed = isNew || scoreIncreased || completionChanged;
   const manuallyEnteredDueAt = existing?.manuallyEnteredDueAt || null;
   const dueAtLocal = manuallyEnteredDueAt || assignment.dueAtLocal || null;
+  const manualCompletionStatus = existing?.manualCompletionStatus || null;
   return {
     ...existing, ...assignment, id: assignment.id, dueAtLocal, manuallyEnteredDueAt,
     score: assignment.score ?? existing?.score ?? null,
-    completionStatus: assignment.completionStatus || existing?.completionStatus || "unknown",
+    sourceCompletionStatus: assignment.completionStatus || existing?.sourceCompletionStatus || "unknown",
+    manualCompletionStatus,
+    completionStatus: manualCompletionStatus || assignment.completionStatus || existing?.completionStatus || "unknown",
     sourceFingerprint: JSON.stringify({ title: assignment.title, dueAtLocal }),
     discoveredAt: existing?.discoveredAt || now, updatedAt: now,
     syncState: changed ? (isNew ? "new" : "changed") : (existing?.syncState || "synced"),
@@ -35,8 +39,9 @@ async function saveScanResult(assignments) {
   const merged = assignments.map((item) => {
     const existing = previous.get(item.id);
     const scoreIncreased = existing?.score != null && item.score != null && item.score > existing.score;
-    const becameCompleted = existing?.completionStatus !== "completed" && item.completionStatus === "completed";
-    if (!existing || scoreIncreased || becameCompleted) detectedIds.add(item.id);
+    const previousSourceCompletion = existing?.sourceCompletionStatus || existing?.completionStatus;
+    const completionChanged = Boolean(existing && item.completionStatus && previousSourceCompletion && previousSourceCompletion !== item.completionStatus);
+    if (!existing || scoreIncreased || completionChanged) detectedIds.add(item.id);
     return normalizeStoredAssignment(item, existing, now);
   });
   const scannedIds = new Set(merged.map((item) => item.id));

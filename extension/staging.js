@@ -13,7 +13,8 @@ function courseAssignments(courseKey) { return assignments.filter((item) => (ite
 
 function renderAssignment(item) {
   const status = item.syncState === "changed" ? "Changed" : item.syncState === "new" ? "New" : item.syncState === "stale" ? "Stale" : item.syncState === "error" ? "Error" : "Synced";
-  return `<div class="assignment"><input type="checkbox" data-id="${escapeHtml(item.id)}" ${item.selected ? "checked" : ""} ${customize ? "" : "disabled"} aria-label="Select ${escapeHtml(item.title)}" /><div><div class="assignment-title">${escapeHtml(item.title || "Untitled assignment")}</div><div class="assignment-meta"><span class="status-pill">${status}</span><span class="${item.dueAtLocal ? "" : "status-pill warning"}">${escapeHtml(dueLabel(item))}</span>${item.score != null ? `<span>${item.score}%</span>` : ""}</div></div><div class="assignment-actions"><button class="edit-due" data-edit-id="${escapeHtml(item.id)}">${item.dueAtLocal ? "Edit" : "Add due date"}</button><a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noreferrer">View</a></div></div>`;
+  const completion = item.manualCompletionStatus || item.completionStatus || "unknown";
+  return `<div class="assignment"><input type="checkbox" data-id="${escapeHtml(item.id)}" ${item.selected ? "checked" : ""} ${customize ? "" : "disabled"} aria-label="Select ${escapeHtml(item.title)}" /><div><div class="assignment-title">${escapeHtml(item.title || "Untitled assignment")}</div><div class="assignment-meta"><span class="status-pill">${status}</span><span class="status-pill">${escapeHtml(completion)}</span>${item.manualCompletionStatus ? '<span class="status-pill">Manual status</span>' : ""}<span class="${item.dueAtLocal ? "" : "status-pill warning"}">${escapeHtml(dueLabel(item))}</span>${item.score != null ? `<span>${item.score}%</span>` : ""}</div></div><div class="assignment-actions"><select class="completion-status" data-completion-id="${escapeHtml(item.id)}" ${customize ? "" : "disabled"} aria-label="Completion status for ${escapeHtml(item.title)}"><option value="" ${!item.manualCompletionStatus ? "selected" : ""}>Use PrairieLearn</option><option value="completed" ${completion === "completed" && item.manualCompletionStatus ? "selected" : ""}>Completed</option><option value="incomplete" ${completion === "incomplete" && item.manualCompletionStatus ? "selected" : ""}>Incomplete</option><option value="unknown" ${completion === "unknown" && item.manualCompletionStatus ? "selected" : ""}>Unknown</option></select><button class="edit-due" data-edit-id="${escapeHtml(item.id)}">${item.dueAtLocal ? "Edit" : "Add due date"}</button><a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noreferrer">View</a></div></div>`;
 }
 
 function render() {
@@ -35,6 +36,13 @@ function render() {
   }).join("");
   listElement.querySelectorAll("input[data-id]").forEach((input) => input.addEventListener("change", async () => { const item = assignments.find((entry) => entry.id === input.dataset.id); if (item) item.selected = input.checked; await persist(); }));
   listElement.querySelectorAll("button[data-edit-id]").forEach((button) => button.addEventListener("click", () => editDueDate(button.dataset.editId)));
+  listElement.querySelectorAll("select[data-completion-id]").forEach((select) => select.addEventListener("change", async () => {
+    const item = assignments.find((entry) => entry.id === select.dataset.completionId); if (!item) return;
+    item.manualCompletionStatus = select.value || null;
+    item.completionStatus = item.manualCompletionStatus || item.sourceCompletionStatus || "unknown";
+    if (item.dueAtLocal) item.selected = true;
+    await persist();
+  }));
   listElement.querySelectorAll("button[data-course-action]").forEach((button) => button.addEventListener("click", async () => {
     courseAssignments(button.dataset.courseKey).forEach((item) => { item.selected = button.dataset.courseAction === "select" && Boolean(item.dueAtLocal); });
     await persist();

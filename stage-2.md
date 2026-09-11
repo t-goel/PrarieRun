@@ -15,8 +15,8 @@ PrairieRun should support three states:
 Completion should be determined in this order:
 
 1. If PrairieLearn explicitly reports the assignment as complete, mark it completed.
-2. If PrairieLearn exposes a numeric score or percentage and the score is **95% or higher**, mark it completed by default.
-3. If the score is below 95%, mark it incomplete.
+2. If PrairieLearn exposes a numeric score or percentage and the score is **strictly above 95%**, mark it completed by default.
+3. If the score is 95% or below, mark it incomplete.
 4. If no reliable status or score exists, mark it unknown.
 
 The 95% threshold must be configurable in Settings, with 95% as the default. The extension should display whether completion came from an explicit PrairieLearn status, the score threshold, or a manual override.
