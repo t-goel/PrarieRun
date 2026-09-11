@@ -158,7 +158,7 @@ async function exportAssignments(assignments) {
       let status;
       if (event?.id) { await calendarRequest(`/calendars/${encodeURIComponent(calendar.id)}/events/${encodeURIComponent(event.id)}`, { method: "PATCH", body: JSON.stringify(resource) }, token); status = "updated"; }
       else { event = await calendarRequest(`/calendars/${encodeURIComponent(calendar.id)}/events`, { method: "POST", body: JSON.stringify(resource) }, token); status = "added"; }
-      sync[assignment.id] = { assignmentId: assignment.id, calendarId: calendar.id, googleEventId: event.id, lastSyncedAt: new Date().toISOString(), eventFingerprint: assignment.sourceFingerprint, completionStatus: assignment.completionStatus, colorStatus: ["completed", "incomplete"].includes(assignment.completionStatus) ? assignment.completionStatus : undefined, syncStatus: "synced" };
+      sync[assignment.id] = { assignmentId: assignment.id, calendarId: calendar.id, googleEventId: event.id, lastSyncedAt: new Date().toISOString(), eventFingerprint: assignment.sourceFingerprint, completionStatus: assignment.completionStatus, syncStatus: "synced" };
       results.push({ assignment, calendar, status, eventId: event.id });
     } catch (error) {
       results.push({ assignment, status: "failed", reason: error?.message || "Unknown Calendar API error" });
