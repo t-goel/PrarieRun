@@ -1,12 +1,10 @@
 const scanButton = document.querySelector("#scan");
-const statusElement = document.querySelector("#status");
 const contextElement = document.querySelector("#context");
 const notificationLeadElement = document.querySelector("#notification-lead-hours");
 const resetDataButton = document.querySelector("#reset-data");
 let settings = { notificationLeadMinutes: 240 };
 
 function showStatus(text, error = false) {
-  if (statusElement) { statusElement.textContent = text; statusElement.classList.toggle("error", error); return; }
   contextElement.textContent = text;
   contextElement.classList.toggle("error", error);
 }
