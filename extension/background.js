@@ -5,7 +5,6 @@ const SYNC_KEY = "prairierunSyncStatus";
 const SETTINGS_KEY = "prairierunSettings";
 const BACKGROUND_CALENDAR_SYNC_KEY = "prairierunCalendarSync";
 const DEBUG_LOG_KEY = "prairierunDebugLog";
-const REMINDER_ALARM_PREFIX = "prairierun-reminder:";
 const defaultSettings = { prairieLearnOrigin: "https://us.prairielearn.com", completionThreshold: 95, defaultReminderMinutes: 10, notificationLeadMinutes: 240, showUndatedAssignments: false };
 let scanInFlight = false;
 const debugEntries = [];
@@ -35,41 +34,6 @@ function isCurrentAssignment(assignment) {
   if (!dueDate) return false;
   const today = new Date();
   return dueDate >= localDateKey(today);
-}
-
-function dueTimestamp(assignment) {
-  const local = String(assignment?.dueAtLocal || "").replace(" ", "T");
-  if (!local) return NaN;
-  const offsets = { CST: "-06:00", CDT: "-05:00", EST: "-05:00", EDT: "-04:00", MST: "-07:00", MDT: "-06:00", PST: "-08:00", PDT: "-07:00" };
-  const offset = offsets[assignment.timezone];
-  const parsed = new Date(offset && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(local) ? `${local}${offset}` : local);
-  return parsed.getTime();
-}
-
-function reminderAlarmName(assignmentId) { return `${REMINDER_ALARM_PREFIX}${assignmentId}`; }
-
-async function scheduleReminder(assignment, leadMinutes) {
-  const alarmName = reminderAlarmName(assignment.id);
-  await chrome.alarms.clear(alarmName);
-  const due = dueTimestamp(assignment);
-  if (!Number.isFinite(due) || due <= Date.now() || assignment.completionStatus === "completed") return;
-  const when = Math.max(Date.now() + 1000, due - leadMinutes * 60 * 1000);
-  await chrome.alarms.create(alarmName, { when });
-}
-
-async function scheduleAllReminders(assignments) {
-  const settings = await getSettings();
-  const leadMinutes = Math.max(0, Math.min(10080, Number(settings.notificationLeadMinutes) || 240));
-  const assignmentIds = new Set(assignments.map((assignment) => assignment.id));
-  const alarms = await chrome.alarms.getAll();
-  await Promise.all(alarms.filter((alarm) => alarm.name.startsWith(REMINDER_ALARM_PREFIX) && !assignmentIds.has(alarm.name.slice(REMINDER_ALARM_PREFIX.length))).map((alarm) => chrome.alarms.clear(alarm.name)));
-  await Promise.all(assignments.map((assignment) => scheduleReminder(assignment, leadMinutes)));
-  debugLog("Assignment reminders scheduled", { count: assignments.length, leadMinutes });
-}
-
-async function scheduleStoredReminders() {
-  const stored = await chrome.storage.local.get(ASSIGNMENTS_KEY);
-  await scheduleAllReminders(stored[ASSIGNMENTS_KEY] || []);
 }
 
 async function getSettings() {
@@ -115,7 +79,6 @@ async function saveScanResult(assignments) {
   const scannedIds = new Set(merged.map((item) => item.id));
   const stale = (stored[ASSIGNMENTS_KEY] || []).filter((item) => !scannedIds.has(item.id)).map((item) => ({ ...item, syncState: "stale", selected: false }));
   await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: [...merged, ...stale] });
-  await scheduleAllReminders(merged);
   return { merged, detectedIds };
 }
 
@@ -264,39 +227,6 @@ async function runScan(sourceTabId, openWhenNew, forceSync = false) {
     debugLog("Scan lock released");
   }
 }
-
-chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (!alarm.name.startsWith(REMINDER_ALARM_PREFIX)) return;
-  const assignmentId = alarm.name.slice(REMINDER_ALARM_PREFIX.length);
-  const stored = await chrome.storage.local.get(ASSIGNMENTS_KEY);
-  const assignment = (stored[ASSIGNMENTS_KEY] || []).find((item) => item.id === assignmentId);
-  if (!assignment || assignment.completionStatus === "completed" || dueTimestamp(assignment) <= Date.now()) {
-    await chrome.alarms.clear(alarm.name);
-    return;
-  }
-  await chrome.notifications.create(alarm.name, {
-    type: "basic",
-    iconUrl: chrome.runtime.getURL("icon.svg"),
-    title: "PrairieRun reminder",
-    message: `${assignment.title || "Assignment"} is due soon.`,
-    contextMessage: `${assignment.courseName || "PrairieLearn"} · Due ${assignment.dueAtLocal}`,
-  });
-  debugLog("Assignment reminder shown", { assignmentId });
-});
-
-chrome.notifications.onClicked.addListener(async (notificationId) => {
-  if (!notificationId.startsWith(REMINDER_ALARM_PREFIX)) return;
-  const assignmentId = notificationId.slice(REMINDER_ALARM_PREFIX.length);
-  const stored = await chrome.storage.local.get(ASSIGNMENTS_KEY);
-  const assignment = (stored[ASSIGNMENTS_KEY] || []).find((item) => item.id === assignmentId);
-  if (assignment?.sourceUrl) await chrome.tabs.create({ url: assignment.sourceUrl });
-});
-
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === "local" && changes[SETTINGS_KEY]) scheduleStoredReminders().catch((error) => debugLog("Could not reschedule reminders", { error: error.message }));
-});
-
-chrome.runtime.onStartup.addListener(() => scheduleStoredReminders().catch((error) => debugLog("Could not restore reminders", { error: error.message })));
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "PRAIRIERUN_START_SCAN") {

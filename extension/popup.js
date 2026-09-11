@@ -86,7 +86,6 @@ resetDataButton.addEventListener("click", async () => {
   resetDataButton.disabled = true;
   await chrome.storage.local.clear();
   await chrome.storage.session.clear();
-  await chrome.alarms.clearAll();
   resetDataButton.disabled = false;
   applySettings({ notificationLeadMinutes: 240 });
   showStatus("Test data cleared. Refresh PrairieLearn to scan again.");

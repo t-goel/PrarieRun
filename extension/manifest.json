@@ -5,7 +5,7 @@
   "description": "Scan PrairieLearn assignments and stage them for Google Calendar.",
   "action": {"default_title": "PrairieRun", "default_popup": "popup.html"},
   "background": {"service_worker": "background.js"},
-  "permissions": ["storage", "tabs", "identity", "alarms", "notifications"],
+  "permissions": ["storage", "tabs", "identity"],
   "host_permissions": ["https://us.prairielearn.com/*", "https://www.googleapis.com/*"],
   "content_scripts": [{
     "matches": ["https://us.prairielearn.com/*"],

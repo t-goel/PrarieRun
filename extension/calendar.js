@@ -86,7 +86,7 @@ function eventDateTime(local, timezone) {
   return date.toISOString();
 }
 
-function eventResource(assignment, calendarId, colorId) {
+function eventResource(assignment, calendarId, colorId, reminderMinutes) {
   const end = eventDateTime(assignment.dueAtLocal, assignment.timezone);
   const endDate = new Date(end);
   const startDate = new Date(endDate.getTime() - 60 * 60 * 1000);
@@ -95,7 +95,7 @@ function eventResource(assignment, calendarId, colorId) {
     description: `PrairieLearn source: ${assignment.sourceUrl}`,
     start: { dateTime: startDate.toISOString(), timeZone: "UTC" },
     end: { dateTime: endDate.toISOString(), timeZone: "UTC" },
-    reminders: { useDefault: false, overrides: [{ method: "popup", minutes: 10 }] },
+    reminders: { useDefault: false, overrides: assignment.completionStatus === "completed" ? [] : [{ method: "popup", minutes: reminderMinutes }] },
     ...(colorId ? { colorId } : {}),
     extendedProperties: { private: { prairieRun: "1", assignmentId: assignment.id, sourceUrl: assignment.sourceUrl, calendarId } },
   };
@@ -134,9 +134,10 @@ async function exportAssignments(assignments) {
   if (!assignments.length) throw new Error("Select at least one assignment with a due date.");
   const token = await getCalendarToken();
   const calendars = await listWritableCalendars(token);
-  const stored = await chrome.storage.local.get([CALENDAR_MAPPINGS_KEY, CALENDAR_SYNC_KEY]);
+  const stored = await chrome.storage.local.get([CALENDAR_MAPPINGS_KEY, CALENDAR_SYNC_KEY, "prairierunSettings"]);
   const mappings = stored[CALENDAR_MAPPINGS_KEY] || {};
   const sync = stored[CALENDAR_SYNC_KEY] || {};
+  const reminderMinutes = Math.max(0, Math.min(10080, Number(stored.prairierunSettings?.notificationLeadMinutes) || 240));
   const results = [];
   const courseKeys = [...new Set(assignments.map((assignment) => assignment.courseInstanceId || assignment.courseName))];
   const colorPlan = await getColorPlan(token, courseKeys);
@@ -156,7 +157,7 @@ async function exportAssignments(assignments) {
         : assignment.completionStatus === "unknown" && event?.id
           ? null
           : classColorId;
-      const resource = eventResource(assignment, calendar.id, colorId);
+      const resource = eventResource(assignment, calendar.id, colorId, reminderMinutes);
       let status;
       if (event?.id) { await calendarRequest(`/calendars/${encodeURIComponent(calendar.id)}/events/${encodeURIComponent(event.id)}`, { method: "PATCH", body: JSON.stringify(resource) }, token); status = "updated"; }
       else { event = await calendarRequest(`/calendars/${encodeURIComponent(calendar.id)}/events`, { method: "POST", body: JSON.stringify(resource) }, token); status = "added"; }

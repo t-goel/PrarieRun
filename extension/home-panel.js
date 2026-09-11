@@ -34,18 +34,21 @@
   function listMarkup() {
     const current = visibleAssignments().sort(PrairieRunView.compareAssignments);
     if (!current.length) return `<li class="list-group-item text-muted">No assignments due today or later. Scan PrairieLearn to refresh.</li>`;
-    const uncompleted = current.filter((item) => !PrairieRunView.isCompleted(item));
-    const completed = current.filter(PrairieRunView.isCompleted);
-    const topThree = uncompleted.filter((item) => item.dueAtLocal).slice(0, 3);
-    const overflow = uncompleted.filter((item) => !topThree.includes(item));
-    const groupMarkup = (items) => {
-      const groups = new Map();
-      items.forEach((item) => { const key = item.courseInstanceId || item.courseName || "Unknown class"; if (!groups.has(key)) groups.set(key, { name: item.courseName || key, items: [] }); groups.get(key).items.push(item); });
-      return [...groups.values()].map((group) => `<li class="list-group-item prr-group-header">${escapeHtml(group.name)}</li>${group.items.map(rowMarkup).join("")}`).join("");
-    };
-    const overflowBlock = overflow.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${overflow.length} more upcoming assignment${overflow.length === 1 ? "" : "s"}</summary><ul class="list-group list-group-flush">${groupMarkup(overflow)}</ul></details></li>` : "";
-    const completedBlock = completed.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${completed.length} completed assignment${completed.length === 1 ? "" : "s"}</summary><ul class="list-group list-group-flush">${groupMarkup(completed)}</ul></details></li>` : "";
-    return `${groupMarkup(topThree)}${overflowBlock}${completedBlock}`;
+    const groups = new Map();
+    current.forEach((item) => {
+      const key = item.courseInstanceId || item.courseName || "Unknown class";
+      if (!groups.has(key)) groups.set(key, { name: item.courseName || key, items: [] });
+      groups.get(key).items.push(item);
+    });
+    return [...groups.values()].map((group) => {
+      const uncompleted = group.items.filter((item) => !PrairieRunView.isCompleted(item));
+      const completed = group.items.filter(PrairieRunView.isCompleted);
+      const topThree = uncompleted.filter((item) => item.dueAtLocal).slice(0, 3);
+      const overflow = uncompleted.filter((item) => !topThree.includes(item));
+      const overflowBlock = overflow.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${overflow.length} more upcoming assignment${overflow.length === 1 ? "" : "s"}</summary>${overflow.map(rowMarkup).join("")}</details></li>` : "";
+      const completedBlock = completed.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${completed.length} completed assignment${completed.length === 1 ? "" : "s"}</summary>${completed.map(rowMarkup).join("")}</details></li>` : "";
+      return `<li class="list-group-item prr-group-header">${escapeHtml(group.name)}</li>${topThree.map(rowMarkup).join("")}${overflowBlock}${completedBlock}`;
+    }).join("");
   }
 
   function render() {
