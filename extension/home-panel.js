@@ -16,7 +16,7 @@
     const syncBadge = item.syncState === "synced" ? "" : `<span class="prr-sync">${escapeHtml(status)}</span>`;
     const score = Number(item.score);
     const progress = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : null;
-    const progressBadge = progress === null ? "" : `<span class="prr-progress" style="--prr-progress: ${progress}" aria-label="${progress}% complete"><span class="prr-progress__value">${Math.round(progress)}%</span></span>`;
+    const progressBadge = progress === null ? "" : `<span class="prr-progress" style="--prr-progress: ${progress}" aria-label="${progress}% complete"><span class="prr-progress__value">${Math.round(progress)}</span></span>`;
     return `<li class="list-group-item prr-row">
       <div class="prr-row-main"><div>
         <a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(item.title || "Untitled assignment")}</a>
