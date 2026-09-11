@@ -38,7 +38,7 @@ manifest's content-script array.
 | `extension/staging.css` | Only referenced by `staging.html` | Dead if the legacy page is removed | Remove with the staging page |
 | `PrairieRunView.currentDateKeys` | Exported but no call sites found | Unused helper | Remove from the module and export |
 | `PrairieRunView.isPending` | Exported but no call sites found after selection removal | Unused helper | Remove from the module and export |
-| `PrairieRunView.statusLabel` | Current call site is `staging.js` only | Conditional dead code | Remove after the legacy staging page is removed |
+| `PrairieRunView.statusLabel` | Called by `home-panel.js` for unsynced/error badges | Live helper | Retain |
 | `runScan` parameter `openWhenNew` | Passed by callers and logged, but never controls behavior | Dead parameter | Remove parameter and related logging |
 | `runScan` result field `newOrChanged` | Constructed and returned; callers use only `assignments` or ignore the result | Dead result data | Remove the local calculation and returned field |
 | `home-panel.css` `.prr-sync--done` | No matching current markup | Dead style | Remove |

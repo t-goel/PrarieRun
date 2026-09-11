@@ -1,4 +1,4 @@
-# PrairieRun Stage 1
+# PrairieRun extension
 
 ## Current functionality
 
@@ -8,15 +8,14 @@
 - Extracts assignments, course names, scores, source URLs, due timestamps, and time zones.
 - Merges base assessments and numbered assessment instances.
 - Stores assignments locally in Chrome.
-- Shows a compact staging area grouped by class.
+- Shows an embedded assignment panel directly below the PrairieLearn course links, grouped by class.
 - Shows assignments due today or later; older assignments remain untouched in Google Calendar.
 - Shows the next three uncompleted assignments, with additional upcoming work and completed work in separate dropdowns.
-- Uses PrairieLearn completion status directly; completion overrides are not supported.
+- Uses PrairieLearn completion status and the strict-greater-than-95% score rule.
 - Sorts incomplete assignments first and puts completed assignments in a dropdown.
 - Adds a Google Calendar popup reminder to each uncompleted assignment; the default lead time is four hours and can be changed in the extension popup. Completed assignments have reminders removed.
 - Keeps undated assignments hidden by default, with an extension setting to reveal them.
-- Shows a green `Synced` state and sync actions when automatic sync is disabled.
-- Lets the user add or edit a due date in customized staging mode.
+- Lets the user add or edit a due date for an undated assignment from the embedded panel.
 - Previews one-hour calendar blocks ending at the due time.
 
 ## Load and test
@@ -27,10 +26,10 @@
 4. Select this `extension` directory.
 5. Log in to `https://us.prairielearn.com/`.
 6. Open the extension popup and click **Scan all classes**.
-7. Open the staging area and review the grouped assignments.
+7. Review the assignment panel below the PrairieLearn course links.
 
 ## Google Calendar export
 
-The extension is configured for the PrairieRun development OAuth client and can request Calendar access from the export preview. On the first export, Chrome will ask the signed-in Google account for consent. Export creates or reuses a `PrairieLearn — {class}` calendar and stores a private assignment marker plus Google event ID for duplicate-safe updates.
+The extension is configured for the PrairieRun development OAuth client and requests Calendar access when the first actionable assignment is synchronized. On the first export, Chrome will ask the signed-in Google account for consent. Synchronization creates or reuses a `PrairieLearn — {class}` calendar and stores a private assignment marker plus Google event ID for duplicate-safe updates.
 
 For a different extension ID or a published build, create a matching Chrome Extension OAuth client and update `manifest.json` before loading the extension.

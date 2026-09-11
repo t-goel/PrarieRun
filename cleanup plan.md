@@ -19,7 +19,8 @@ only; no source files, manifests, tests, or fixtures were removed.
    `extension/staging.css` only after confirming no supported workflow opens the
    standalone staging page.
 2. Remove `currentDateKeys` and `isPending` from `extension/view-utils.js`.
-3. Remove `statusLabel` from `extension/view-utils.js` after staging removal.
+3. Retain `statusLabel`; it is still used by the embedded home panel for
+   unsynced/error badges.
 4. Remove the unused `openWhenNew` argument from `runScan` and its call sites.
 5. Remove the unused `newOrChanged` calculation and return field from
    `runScan`.
