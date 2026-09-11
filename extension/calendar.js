@@ -3,9 +3,25 @@ const CALENDAR_SYNC_KEY = "prairierunCalendarSync";
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 
 async function getCalendarToken() {
-  const result = await chrome.identity.getAuthToken({ interactive: true });
-  if (!result?.token) throw new Error("Google did not return an authorization token.");
-  return result.token;
+  const redirectUri = chrome.identity.getRedirectURL("oauth2");
+  const params = new URLSearchParams({
+    client_id: "284599557855-pfljcv4vurch08uvfue1ea50mck0me2h.apps.googleusercontent.com",
+    response_type: "token",
+    redirect_uri: redirectUri,
+    scope: "https://www.googleapis.com/auth/calendar",
+    prompt: "consent",
+  });
+  const responseUrl = await chrome.identity.launchWebAuthFlow({
+    url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
+    interactive: true,
+  });
+  if (!responseUrl) throw new Error("Google authorization was cancelled.");
+  const fragment = new URL(responseUrl).hash.slice(1);
+  const result = new URLSearchParams(fragment);
+  if (result.get("error")) throw new Error(`Google authorization failed: ${result.get("error_description") || result.get("error")}`);
+  const token = result.get("access_token");
+  if (!token) throw new Error("Google did not return an access token.");
+  return token;
 }
 
 async function calendarRequest(path, options = {}, token) {
