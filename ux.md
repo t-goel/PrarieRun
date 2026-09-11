@@ -1,5 +1,47 @@
 # PrairieLearn Calendar Extension — UX Map
 
+## Implementation audit: dead-code and cleanup candidates
+
+This audit records implementation findings without changing or removing source
+files. The current product surface is the PrairieLearn home-page panel plus the
+extension popup. The standalone staging page is not linked by the current
+manifest, popup, content script, or background service worker.
+
+### UX code that is no longer represented in the current product
+
+- `extension/staging.html`, `extension/staging.js`, and `extension/staging.css`
+  implement the former standalone staging page. They are not reachable from the
+  current UI and duplicate the home-page panel's assignment rendering and due
+  date editing. Treat them as removal candidates after the embedded panel has
+  passed the regression checklist in `cleanup plan.md`.
+- The old per-assignment selection workflow is no longer part of the current
+  UX. Source searches found no active checkboxes, selected-assignment export,
+  “deselect all,” or manual sync controls in the extension. Historical planning
+  text in this file and the stage documents should be treated as design history,
+  not as current requirements.
+- The popup stylesheet still contains `.stats` rules, although the current
+  popup has no `.stats` markup. The popup script also retains a fallback for a
+  missing `#status` element; the current popup uses `#context` instead.
+- The home-panel stylesheet contains `.prr-sync--done`, which has no current
+  markup, and `.prr-check-spacer`, a zero-width layout placeholder left from the
+  removed checkbox design.
+
+### UX behavior that must be preserved during cleanup
+
+- The home panel remains directly below PrairieLearn's course links.
+- Automatic scanning and automatic calendar synchronization remain the default.
+- Assignments without due dates remain hidden by default and can be revealed or
+  edited through the existing undated-assignment control.
+- Existing synced assignments remain collapsed according to the current panel
+  rules; new or changed assignments remain visible when the product needs the
+  user to review them.
+- Calendar links, class-specific calendars, completion state, duplicate
+  prevention, and the strict-greater-than-95% (not equal to 95%) completion rule
+  must not regress.
+
+See `systemdesign.md` for implementation evidence and `cleanup plan.md` for the
+ordered, non-executed removal plan.
+
 ## Product promise
 
 “Scan my PrairieLearn classes, let me review everything in one place, and publish due dates to Google Calendar without duplicates.”
