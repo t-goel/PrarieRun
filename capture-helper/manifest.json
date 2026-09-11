@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "PrairieRun Stage 0 Capture Helper",
+  "version": "0.1.0",
+  "description": "Locally captures PrairieLearn page snapshots for parser validation.",
+  "action": {
+    "default_title": "PrairieRun Capture Helper",
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "downloads"
+  ]
+}

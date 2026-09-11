@@ -1,0 +1,70 @@
+:root {
+  color-scheme: light;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f7f8fa;
+  color: #17202a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  width: 360px;
+  margin: 0;
+  background: #f7f8fa;
+}
+
+main { padding: 18px; }
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: #596b7d;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 6px; font-size: 22px; letter-spacing: -.02em; }
+h2 { margin: 0; font-size: 14px; }
+.intro, .help { color: #596b7d; font-size: 12px; line-height: 1.45; }
+.intro { margin-bottom: 14px; }
+
+.notice {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 14px;
+  padding: 10px 11px;
+  border: 1px solid #cbd9e6;
+  border-radius: 9px;
+  background: #eef6fc;
+  color: #36536b;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+button { font: inherit; cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .48; }
+.primary, .secondary {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-weight: 700;
+}
+.primary { background: #1f6feb; color: white; }
+.secondary { border: 1px solid #c8d0d9; background: white; color: #243444; }
+.status { min-height: 18px; margin: 8px 0 14px; color: #596b7d; font-size: 11px; }
+.status.error { color: #a32929; }
+
+.captured { border-top: 1px solid #dfe4e9; padding-top: 13px; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; border-radius: 10px; background: #e5ebf1; color: #405263; font-size: 11px; font-weight: 700; }
+.capture-list { max-height: 180px; overflow: auto; margin: 0; padding-left: 22px; }
+.capture-list li { padding: 5px 0 5px 3px; color: #35485a; font-size: 11px; line-height: 1.35; }
+.capture-list .empty { padding-left: 0; list-style: none; color: #7a8997; }
+.capture-list .kind { display: block; color: #17202a; font-weight: 700; }
+.capture-list .url { display: block; overflow: hidden; color: #6a7a88; text-overflow: ellipsis; white-space: nowrap; }
+.actions { display: grid; gap: 8px; margin-top: 14px; }
+.text-button { border: 0; background: transparent; color: #6a3fb5; font-size: 11px; }
+.help { margin: 13px 0 0; font-size: 11px; }

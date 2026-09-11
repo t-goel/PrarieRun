@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>PrairieRun</title><link rel="stylesheet" href="popup.css" /></head>
+  <body>
+    <main>
+      <p class="eyebrow">PrairieRun</p>
+      <h1>Assignment calendar</h1>
+      <p id="context" class="muted">Checking the active PrairieLearn page…</p>
+      <button id="scan" class="primary">Scan all classes</button>
+      <p id="status" class="status" role="status">Ready.</p>
+      <div class="stats"><div><strong id="new-count">0</strong><span>new or changed</span></div><div><strong id="staged-count">0</strong><span>staged total</span></div></div>
+      <button id="open-staging" class="secondary">Open staging area</button>
+      <p class="muted small">Scan stays local. Calendar export is configured from the staging area.</p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

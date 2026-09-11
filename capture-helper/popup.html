@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PrairieRun Capture Helper</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">PrairieRun · Stage 0</p>
+        <h1>Capture page data</h1>
+        <p class="intro">Capture representative PrairieLearn pages locally so we can validate the parser.</p>
+      </header>
+
+      <section class="notice">
+        <strong>Local-only capture</strong>
+        <span>No passwords, cookies, or network uploads are collected. Page text may include private course data; review captures before sharing.</span>
+      </section>
+
+      <button id="capture" class="primary">Capture current page</button>
+      <p id="status" class="status" role="status">Ready.</p>
+
+      <section class="captured">
+        <div class="section-heading">
+          <h2>Captured pages</h2>
+          <span id="count" class="count">0</span>
+        </div>
+        <ol id="capture-list" class="capture-list">
+          <li class="empty">No pages captured yet.</li>
+        </ol>
+      </section>
+
+      <div class="actions">
+        <button id="download" class="secondary" disabled>Download fixture bundle</button>
+        <button id="clear" class="text-button" disabled>Clear local captures</button>
+      </div>
+
+      <p class="help">Recommended captures: home page, class page, assignment page, completed assignment, score near 95%, and assignment without a due date.</p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
