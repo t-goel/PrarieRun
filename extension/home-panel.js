@@ -62,6 +62,9 @@
   function mount() {
     if (document.getElementById(PANEL_ID)) return;
     panel = document.createElement("section"); panel.id = PANEL_ID; panel.setAttribute("aria-label", "PrairieRun assignments");
+    const courseComponent = document.querySelector('[data-component="HomeCards"]');
+    const courseCard = courseComponent?.querySelector(".card");
+    if (courseComponent && courseCard) { courseComponent.append(panel); panel.innerHTML = `<div class="prr-header"><strong>Scanning PrairieRun assignments…</strong></div>`; chrome.storage.local.get(SETTINGS_KEY).then((stored) => { settings = { ...settings, ...(stored[SETTINGS_KEY] || {}) }; render(); }); return; }
     const link = [...document.querySelectorAll("a[href]")].find((anchor) => /\/pl\/course_instance\/\d+/.test(anchor.href));
     const list = link?.closest("ul,ol");
     if (list?.parentElement) list.parentElement.insertBefore(panel, list.nextSibling); else if (link?.parentElement) link.parentElement.insertAdjacentElement("afterend", panel); else document.body.prepend(panel);

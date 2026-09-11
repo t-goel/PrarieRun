@@ -1,6 +1,7 @@
 importScripts("calendar.js");
 
 const ASSIGNMENTS_KEY = "prairierunAssignments";
+const CALENDAR_SYNC_KEY = "prairierunCalendarSync";
 const SYNC_KEY = "prairierunSyncStatus";
 const SETTINGS_KEY = "prairierunSettings";
 const defaultSettings = { prairieLearnOrigin: "https://us.prairielearn.com", completionThreshold: 95, defaultReminderMinutes: 10, autoAddToCalendar: true };
@@ -112,7 +113,12 @@ async function notifyHomeTab(tabId, assignments, detectedIds, autoAdd) {
   const settings = await getSettings();
   let exportResults = [];
   if (autoAdd && settings.autoAddToCalendar) {
-    const eligible = assignments.filter((item) => detectedIds.has(item.id) && ["new", "changed"].includes(item.syncState) && item.dueAtLocal);
+    const syncStored = await chrome.storage.local.get(CALENDAR_SYNC_KEY);
+    const calendarSync = syncStored[CALENDAR_SYNC_KEY] || {};
+    const eligible = assignments.filter((item) => item.dueAtLocal && (
+      (detectedIds.has(item.id) && ["new", "changed"].includes(item.syncState))
+      || (["completed", "incomplete"].includes(item.completionStatus) && calendarSync[item.id]?.colorStatus !== item.completionStatus)
+    ));
     if (eligible.length) exportResults = await PrairieRunCalendar.exportAssignments(eligible);
     exportResults.forEach((result) => {
       const item = assignments.find((entry) => entry.id === result.assignment.id);
