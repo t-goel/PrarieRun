@@ -9,6 +9,7 @@ const emptyElement = document.querySelector("#empty");
 function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;"); }
 function dueLabel(item) { return item.dueAtLocal ? `${item.dueAtLocal}${item.timezone ? ` (${item.timezone})` : ""}` : "No due date"; }
 function selectedAssignments() { return assignments.filter((item) => item.selected); }
+function courseAssignments(courseKey) { return assignments.filter((item) => (item.courseInstanceId || item.courseName || "Unknown class") === courseKey); }
 
 function renderAssignment(item) {
   const status = item.syncState === "changed" ? "Changed" : item.syncState === "new" ? "New" : item.syncState === "stale" ? "Stale" : item.syncState === "error" ? "Error" : "Synced";
@@ -29,10 +30,15 @@ function render() {
   const groups = new Map();
   assignments.forEach((item) => { const key = item.courseInstanceId || item.courseName || "Unknown class"; if (!groups.has(key)) groups.set(key, { name: item.courseName || key, items: [] }); groups.get(key).items.push(item); });
   listElement.innerHTML = [...groups.values()].map((group) => {
-    return `<section class="course"><div class="course-header"><span class="course-name">${escapeHtml(group.name)}</span><span class="course-meta">${group.items.length} assignment${group.items.length === 1 ? "" : "s"}</span></div>${group.items.map(renderAssignment).join("")}</section>`;
+    const courseKey = group.items[0].courseInstanceId || group.items[0].courseName || "Unknown class";
+    return `<section class="course"><div class="course-header"><span class="course-name">${escapeHtml(group.name)}</span><span class="course-meta">${group.items.length} assignment${group.items.length === 1 ? "" : "s"} <button class="course-select" data-course-action="select" data-course-key="${escapeHtml(courseKey)}">Select</button><button class="course-select" data-course-action="deselect" data-course-key="${escapeHtml(courseKey)}">Deselect</button></span></div>${group.items.map(renderAssignment).join("")}</section>`;
   }).join("");
   listElement.querySelectorAll("input[data-id]").forEach((input) => input.addEventListener("change", async () => { const item = assignments.find((entry) => entry.id === input.dataset.id); if (item) item.selected = input.checked; await persist(); }));
   listElement.querySelectorAll("button[data-edit-id]").forEach((button) => button.addEventListener("click", () => editDueDate(button.dataset.editId)));
+  listElement.querySelectorAll("button[data-course-action]").forEach((button) => button.addEventListener("click", async () => {
+    courseAssignments(button.dataset.courseKey).forEach((item) => { item.selected = button.dataset.courseAction === "select" && Boolean(item.dueAtLocal); });
+    await persist();
+  }));
 }
 
 async function persist() { await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments }); render(); }

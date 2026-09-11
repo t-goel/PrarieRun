@@ -23,6 +23,7 @@ h2 { margin: 0 0 7px; font-size: 18px; }
 .course-header { display: flex; justify-content: space-between; gap: 12px; padding: 13px 15px; border-bottom: 1px solid #e7ebef; background: #fbfcfd; }
 .course-name { font-weight: 700; }
 .course-meta { color: #607080; font-size: 12px; }
+.course-select { border: 0; background: transparent; color: #1f6feb; cursor: pointer; font: inherit; margin-left: 6px; padding: 0; }
 .assignment { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 12px 15px; border-bottom: 1px solid #edf0f2; }
 .assignment:last-child { border-bottom: 0; }
 .assignment input { width: 16px; height: 16px; }
