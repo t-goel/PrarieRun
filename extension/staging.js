@@ -53,7 +53,7 @@ function showPreview() {
   document.querySelector("#preview").showModal();
 }
 
-async function exportSelected() {
+async function exportSelected(closeOnSuccess = false) {
   const selected = selectedAssignments().filter((item) => item.dueAtLocal);
   const button = document.querySelector("#confirm-export");
   button.disabled = true;
@@ -72,6 +72,9 @@ async function exportSelected() {
     const failed = results.filter((result) => result.status === "failed");
     const detail = failed.length ? `\n\nFailed items remain selected for retry:\n${failed.map((result) => `• ${result.assignment.title}: ${result.reason}`).join("\n")}` : "";
     alert(`Calendar sync complete: ${added} added, ${updated} updated, ${failed.length} failed.${detail}`);
+    if (closeOnSuccess && !failed.length) {
+      chrome.tabs.getCurrent((tab) => { if (tab?.id) chrome.tabs.remove(tab.id); });
+    }
   } catch (error) {
     alert(error?.message || "Google Calendar export failed.");
   } finally {
@@ -81,6 +84,10 @@ async function exportSelected() {
 }
 
 document.querySelector("#add-new").addEventListener("click", showPreview);
+document.querySelector("#quick-add").addEventListener("click", () => {
+  if (!selectedAssignments().some((item) => item.dueAtLocal)) { alert("There are no selected assignments with due dates."); return; }
+  exportSelected(true);
+});
 document.querySelector("#deselect").addEventListener("click", async () => { assignments.forEach((item) => { item.selected = false; }); await persist(); });
 document.querySelector("#customize").addEventListener("click", () => { customize = !customize; document.querySelector("#customize").textContent = customize ? "Back to bulk view" : "Customize selection"; render(); });
 document.querySelector("#confirm-export").addEventListener("click", (event) => { event.preventDefault(); exportSelected(); });

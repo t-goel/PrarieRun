@@ -11,8 +11,9 @@ async function getSettings() {
 
 function normalizeStoredAssignment(assignment, existing, now) {
   const scoreIncreased = existing?.score != null && assignment.score != null && assignment.score > existing.score;
+  const becameCompleted = existing?.completionStatus !== "completed" && assignment.completionStatus === "completed";
   const isNew = !existing;
-  const changed = isNew || scoreIncreased;
+  const changed = isNew || scoreIncreased || becameCompleted;
   const manuallyEnteredDueAt = existing?.manuallyEnteredDueAt || null;
   const dueAtLocal = manuallyEnteredDueAt || assignment.dueAtLocal || null;
   return {
@@ -30,11 +31,18 @@ async function saveScanResult(assignments) {
   const stored = await chrome.storage.local.get(ASSIGNMENTS_KEY);
   const previous = new Map((stored[ASSIGNMENTS_KEY] || []).map((item) => [item.id, item]));
   const now = new Date().toISOString();
-  const merged = assignments.map((item) => normalizeStoredAssignment(item, previous.get(item.id), now));
+  const detectedIds = new Set();
+  const merged = assignments.map((item) => {
+    const existing = previous.get(item.id);
+    const scoreIncreased = existing?.score != null && item.score != null && item.score > existing.score;
+    const becameCompleted = existing?.completionStatus !== "completed" && item.completionStatus === "completed";
+    if (!existing || scoreIncreased || becameCompleted) detectedIds.add(item.id);
+    return normalizeStoredAssignment(item, existing, now);
+  });
   const scannedIds = new Set(merged.map((item) => item.id));
   const stale = (stored[ASSIGNMENTS_KEY] || []).filter((item) => !scannedIds.has(item.id)).map((item) => ({ ...item, syncState: "stale", selected: false }));
   await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: [...merged, ...stale] });
-  return merged;
+  return { merged, detectedIds };
 }
 
 async function setSyncStatus(status) { await chrome.storage.local.set({ [SYNC_KEY]: status }); }
@@ -76,7 +84,7 @@ async function startScan(sourceTabId) {
   const home = await readPage(sourceTabId);
   if (home.pageType === "course") {
     const result = await saveScanResult(home.assignments || []);
-    await setSyncStatus({ state: "complete", completed: 1, total: 1, found: result.length, current: "Scan complete" });
+    await setSyncStatus({ state: "complete", completed: 1, total: 1, found: result.merged.length, current: "Scan complete" });
     return result;
   }
   if (home.pageType !== "home") throw new Error("Open the PrairieLearn home page or a class assessment page before scanning.");
@@ -91,7 +99,7 @@ async function startScan(sourceTabId) {
     await setSyncStatus({ state: "scanning", current: `Scanned ${index + 1} of ${courseLinks.length} classes`, completed: index + 1, total: courseLinks.length, found: allAssignments.length });
   }
   const result = await saveScanResult(allAssignments);
-  await setSyncStatus({ state: "complete", completed: courseLinks.length, total: courseLinks.length, found: result.length, current: "Scan complete" });
+  await setSyncStatus({ state: "complete", completed: courseLinks.length, total: courseLinks.length, found: result.merged.length, current: "Scan complete" });
   return result;
 }
 
@@ -109,8 +117,9 @@ async function runScan(sourceTabId, openWhenNew) {
   if (scanInFlight) return { assignments: [], skipped: true };
   scanInFlight = true;
   try {
-    const assignments = await startScan(sourceTabId);
-    const newOrChanged = assignments.filter((item) => ["new", "changed"].includes(item.syncState));
+    const scan = await startScan(sourceTabId);
+    const assignments = scan.merged;
+    const newOrChanged = assignments.filter((item) => scan.detectedIds.has(item.id));
     if (openWhenNew && newOrChanged.length) await openStagingArea();
     return { assignments, newOrChanged };
   } finally {
