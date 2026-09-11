@@ -26,7 +26,7 @@ function normalizeStoredAssignment(assignment, existing, now) {
     sourceFingerprint: JSON.stringify({ title: assignment.title, dueAtLocal }),
     discoveredAt: existing?.discoveredAt || now, updatedAt: now,
     syncState: changed ? (isNew ? "new" : "changed") : (existing?.syncState === "error" ? "error" : "synced"),
-    selected: changed && dueAtLocal ? (existing?.selected !== false) : Boolean(existing?.selected && dueAtLocal),
+    selected: changed && dueAtLocal ? true : Boolean(existing?.selected && dueAtLocal),
   };
 }
 
