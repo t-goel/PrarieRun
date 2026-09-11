@@ -32,7 +32,7 @@ Clicking **Scan all classes** starts a scan confirmation state:
 
 - Detected course count, if available
 - Toggle: **Refresh existing assignments** (on by default)
-- Checkbox: **Include closed/past assignments** (off by default)
+- Button: **Show undated assignments** (off by default)
 - Button: **Start scan**
 
 During scanning, show a compact progress view:
@@ -69,13 +69,12 @@ The staging dashboard is the main product surface. It should be usable without s
 - Page title: **Assignment staging area**
 - Last scanned timestamp
 - Primary button: **Add new and changed with due dates**
-- Secondary button: **Deselect all**
-- Less prominent actions: **Customize selection**, **Scan again**, **Connect Google Calendar**
+- Less prominent actions: **Scan again**, **Connect Google Calendar**
 - Summary chips: `18 new`, `20 synced`, `3 changed`, `1 needs a date`
 
 ### Filters and organization
 
-- Course multi-select
+- Course grouping
 - Due-date range
 - Status filter: New, Changed, Synced, Missing date, Stale, Error
 - Search by title or course
@@ -89,31 +88,26 @@ Remember filters between visits, but include **Clear filters**.
 Keep the initial staging view compact and low-clutter:
 
 - Show assignments grouped by course with a course total and sync summary.
-- Treat only new and changed assignments with due dates as selected by default.
-- Show one clear bulk action: **Add new and changed with due dates**.
-- Show **Deselect all** beside it for users who want to start from an empty selection.
-- Keep detailed checkboxes, filters, and per-assignment actions behind **Customize selection**.
+- Treat only new and changed assignments with due dates as eligible for synchronization by default.
+- Show one clear bulk action: **Sync assignments**.
+- Keep assignment details and per-assignment actions visible without per-assignment selection controls.
 - If there are missing dates or errors, show a concise warning count and let the user review those items without expanding every row. Missing-date assignments are excluded from the bulk action by default.
 
-### Customized selection view
+### Assignment detail view
 
-Selecting **Customize selection** expands the dashboard into the detailed mode:
+The assignment detail view shows the following:
 
-- Row-level checkboxes
-- Select/deselect all assignments in a course
+- Row-level assignment details
 - Search and filters
 - New/changed/synced status indicators
 - Per-assignment edit, exclude, and source-link actions
-- **Add selected to Google Calendar** as the primary action
-- **Back to bulk view** to collapse the extra controls
-
-The interface should remember the user's selection while moving between bulk and customized views.
+- **Sync assignments** as the primary action
 
 ### Assignment row/card
 
 Each assignment displays:
 
-- Selection checkbox
+- Assignment status
 - Course color marker
 - Assignment title
 - Course name
@@ -128,19 +122,16 @@ For changed or synced items, show a small status explanation rather than color a
 
 In the default bulk view, show only the essential actions:
 
-- **Add new and changed with due dates**
-- **Deselect all**
-- **Customize selection**
+- **Sync assignments**
 
-In customized selection mode, show:
+In the assignment detail view, show:
 
 - **Set calendar**
 - **Set class calendar**
 - **Set reminder**
-- **Exclude selected**
-- **Add selected to Google Calendar**
+- **Sync assignments**
 
-The default selection should be “new and changed assignments with due dates.” A missing-date assignment can be edited in staging to add a due date/time; after saving, it can be manually selected. It remains excluded from the bulk action until it has a valid due date.
+The default synchronization set should be “new and changed assignments with due dates.” A missing-date assignment can be edited in staging to add a due date/time; after saving, it becomes eligible. It remains excluded from synchronization until it has a valid due date.
 
 ## Assignment edit flow
 
@@ -191,7 +182,7 @@ If color support is limited, explain the behavior immediately beside the choice 
 
 During each scan, the extension checks assignment completion. An assignment is considered completed when PrairieLearn explicitly marks it complete or when its score is strictly above 95% by default.
 
-In **Customize selection**, each assignment has a compact completion control:
+Each assignment has a compact completion control:
 
 - Completed
 - Incomplete
@@ -236,7 +227,7 @@ Actions:
 - **Retry failed items**
 - **Back to staging area**
 
-For failures, preserve selection and edits. Never discard staged data because of a calendar error.
+For failures, preserve assignment edits. Never discard staged data because of a calendar error.
 
 ## Duplicate and conflict UX
 
@@ -301,7 +292,7 @@ The extension should display the active PrairieLearn domain and the connected Go
 
 - One-click scan from PrairieLearn home
 - Course grouping
-- Staging list with selection and basic editing
+- Staging list with basic editing
 - Separate Google Calendar mapping for each class
 - Create/update events with duplicate protection
 - Scan/export progress and error states

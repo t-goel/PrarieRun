@@ -29,15 +29,13 @@ The first implementation must target one known PrairieLearn deployment. Keep sel
 ### Compact staging area
 
 - Group assignments by class.
-- Default selection includes only assignments that are **new or changed** since the last successful sync and have a due date.
+- Default synchronization includes only assignments that are **new or changed** since the last successful sync and have a due date.
 - For Stage 1, “changed” means PrairieLearn reports a higher score than the last scan. Completion-state changes are handled by Stage 2.
-- Already-synced assignments remain visible but are not selected for export.
+- Already-synced assignments remain visible but are not exported again.
 - Assignments without due dates remain in staging but are excluded from calendar export by default.
-- Primary actions: **Add new and changed with due dates** and **Deselect all**.
-- **Customize selection** reveals individual assignment checkboxes, class-level select/deselect controls, filters, and edits.
-- A user can manually select an already-synced assignment, but the default bulk action never re-exports unchanged records.
-- A user can enter a due date/time for a missing-date assignment in staging. Once a valid date is entered, it becomes eligible for selection.
-- Deselecting an assignment does not delete an existing Google Calendar event.
+- Primary action: **Sync assignments**.
+- The staging area shows assignment details and due-date edits without per-assignment selection controls.
+- A user can enter a due date/time for a missing-date assignment in staging. Once a valid date is entered, it becomes eligible for synchronization.
 
 ### Separate Google Calendar per class
 
@@ -102,7 +100,6 @@ type Assignment = {
   manuallyEnteredDueAt?: string;
   discoveredAt: string;
   updatedAt: string;
-  selectionState: "selected" | "deselected";
   syncState: "new" | "changed" | "synced" | "stale" | "error";
 };
 ```
@@ -112,7 +109,7 @@ type Assignment = {
 - Parser fixtures for the target PrairieLearn deployment.
 - Stable-ID and merge tests.
 - Tests proving a repeated export creates no duplicate events.
-- Tests for new/changed-only default selection, where changed means a higher score.
+- Tests for new/changed-only synchronization, where changed means a completion-state change.
 - Tests proving assignments without due dates stay excluded by default and become eligible after a staging-area due date is entered.
 - Tests proving timed events start exactly one hour before the due time and end at the due time.
 - Calendar mapping and calendar-creation tests using a dedicated Google account.

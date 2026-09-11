@@ -15,7 +15,7 @@
 - Sorts incomplete assignments first and puts completed assignments in a dropdown.
 - Adds a Google Calendar popup reminder to each uncompleted assignment; the default lead time is four hours and can be changed in the extension popup. Completed assignments have reminders removed.
 - Keeps undated assignments hidden by default, with an extension setting to reveal them.
-- Shows a green `✓ Synced` state and per-assignment sync buttons when automatic sync is disabled.
+- Shows a green `Synced` state and sync actions when automatic sync is disabled.
 - Lets the user add or edit a due date in customized staging mode.
 - Previews one-hour calendar blocks ending at the due time.
 

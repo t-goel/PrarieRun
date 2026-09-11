@@ -11,17 +11,14 @@
   function dueLabel(item) { return item.dueAtLocal ? `${item.dueAtLocal}${item.timezone ? ` (${item.timezone})` : ""}` : "No due date"; }
   function isActionable(item) { return PrairieRunView.isPending(item) && Boolean(item.dueAtLocal); }
   function visibleAssignments() { return assignments.filter((item) => PrairieRunView.displayable(item, settings.showUndatedAssignments)); }
-  function selectable() { return visibleAssignments().filter((item) => item.selected && isActionable(item) && item.dueAtLocal); }
+  function syncableAssignments() { return visibleAssignments().filter((item) => isActionable(item) && item.dueAtLocal); }
 
   function rowMarkup(item) {
     const status = PrairieRunView.statusLabel(item);
     const completion = item.completionStatus || "unknown";
-    const checkbox = isActionable(item)
-      ? `<input class="prr-check" type="checkbox" data-id="${escapeHtml(item.id)}" ${item.selected ? "checked" : ""} aria-label="Select ${escapeHtml(item.title)}" />`
-      : `<span class="prr-check-spacer"></span>`;
     const syncBadge = item.syncState === "synced" ? "" : `<span class="prr-sync">${escapeHtml(status)}</span>`;
     return `<li class="list-group-item prr-row">
-      <div class="prr-row-main">${checkbox}<div>
+      <div class="prr-row-main"><span class="prr-check-spacer" aria-hidden="true"></span><div>
         <a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(item.title || "Untitled assignment")}</a>
         <div class="prr-meta text-muted">${syncBadge}${syncBadge ? " " : ""}<span>${escapeHtml(completion)}</span> <span>${escapeHtml(dueLabel(item))}</span>${item.score != null ? ` <span>${item.score}%</span>` : ""}</div>
       </div></div>
@@ -55,9 +52,8 @@
     if (!panel) return;
     const current = visibleAssignments();
     panel.querySelector(".prr-count").textContent = `${current.length} current assignment${current.length === 1 ? "" : "s"}`;
-    panel.querySelector("#prr-show-undated").checked = settings.showUndatedAssignments === true;
+    panel.querySelector("#prr-show-undated").textContent = settings.showUndatedAssignments ? "Hide undated" : "Show undated";
     panel.querySelector(".prr-list").innerHTML = listMarkup();
-    panel.querySelectorAll("input.prr-check").forEach((input) => input.addEventListener("change", async () => { const item = assignments.find((entry) => entry.id === input.dataset.id); if (item) item.selected = input.checked; await persist(); }));
     panel.querySelectorAll("button[data-edit-id]").forEach((button) => button.addEventListener("click", () => editDueDate(button.dataset.editId)));
     updateSyncAction();
   }
@@ -69,22 +65,22 @@
     const current = item.manuallyEnteredDueAt || item.dueAtLocal || "";
     const value = prompt("Enter due date/time as YYYY-MM-DD HH:MM. Leave blank to remove the manual date.", current.replace("T", " ").slice(0, 16));
     if (value === null) return;
-    if (!value.trim()) { item.manuallyEnteredDueAt = null; item.dueAtLocal = null; item.selected = false; }
+    if (!value.trim()) { item.manuallyEnteredDueAt = null; item.dueAtLocal = null; }
     else {
       const normalized = value.trim().replace("T", " ");
       if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(normalized)) { alert("Use YYYY-MM-DD HH:MM."); return; }
-      item.manuallyEnteredDueAt = normalized; item.dueAtLocal = normalized; item.syncState = item.syncState === "new" ? "new" : "changed"; item.selected = true;
+      item.manuallyEnteredDueAt = normalized; item.dueAtLocal = normalized; item.syncState = item.syncState === "new" ? "new" : "changed";
     }
     await persist();
   }
 
-  function exportSelected(singleId = null) {
-    const selected = singleId ? assignments.filter((item) => item.id === singleId && isActionable(item) && item.dueAtLocal) : selectable();
-    if (!selected.length) return;
+  function syncAssignments() {
+    const syncable = syncableAssignments();
+    if (!syncable.length) return;
     const button = panel.querySelector("#prr-sync-action");
     button.disabled = true; button.textContent = "Connecting…";
-    chrome.runtime.sendMessage({ type: "PRAIRIERUN_EXPORT_SELECTED", assignments: selected }, (response) => {
-      button.textContent = "Sync selected";
+    chrome.runtime.sendMessage({ type: "PRAIRIERUN_SYNC_ASSIGNMENTS", assignments: syncable }, (response) => {
+      button.textContent = "Sync assignments";
       if (chrome.runtime.lastError || !response?.ok) { alert(response?.error || chrome.runtime.lastError?.message || "Calendar export failed."); render(); return; }
       assignments = response.assignments || assignments;
       render();
@@ -100,11 +96,11 @@
     const button = panel.querySelector("#prr-sync-action");
     const dated = visibleAssignments().filter((item) => item.dueAtLocal);
     const allSynced = dated.length > 0 && dated.every((item) => item.syncState === "synced");
-    const selected = selectable();
+    const syncable = syncableAssignments();
     button.classList.toggle("prr-sync-action--synced", allSynced);
-    button.disabled = allSynced || !selected.length;
-    button.textContent = allSynced ? "✓ Synced" : selected.length ? "Sync selected" : "Needs sync";
-    button.setAttribute("aria-label", allSynced ? "All current assignments are synced" : "Sync selected assignments");
+    button.disabled = allSynced || !syncable.length;
+    button.textContent = allSynced ? "Synced" : syncable.length ? "Sync assignments" : "Needs sync";
+    button.setAttribute("aria-label", allSynced ? "All current assignments are synced" : "Sync assignments");
   }
 
   function buildPanel() {
@@ -114,13 +110,13 @@
     built.innerHTML = `<div class="card-header bg-primary text-white prr-header">
       <span>PrairieRun <span class="prr-count"></span></span>
       <div class="prr-header-controls">
-        <label class="prr-setting-label"><input type="checkbox" id="prr-show-undated" /> Undated</label>
+        <button type="button" class="btn btn-light btn-sm" id="prr-show-undated">Show undated</button>
         <button type="button" class="btn btn-light btn-sm prr-sync-action" id="prr-sync-action" disabled>Needs sync</button>
       </div>
     </div>
     <ul class="list-group list-group-flush prr-list"></ul>`;
-    built.querySelector("#prr-show-undated").addEventListener("change", async (event) => { settings.showUndatedAssignments = event.target.checked; await chrome.storage.local.set({ [SETTINGS_KEY]: settings }); render(); });
-    built.querySelector("#prr-sync-action").addEventListener("click", () => exportSelected());
+    built.querySelector("#prr-show-undated").addEventListener("click", async () => { settings.showUndatedAssignments = !settings.showUndatedAssignments; await chrome.storage.local.set({ [SETTINGS_KEY]: settings }); render(); });
+    built.querySelector("#prr-sync-action").addEventListener("click", () => syncAssignments());
     return built;
   }
 

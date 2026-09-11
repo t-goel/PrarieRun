@@ -131,7 +131,7 @@ async function findMarkedEvent(assignment, calendarId, token) {
 }
 
 async function exportAssignments(assignments) {
-  if (!assignments.length) throw new Error("Select at least one assignment with a due date.");
+  if (!assignments.length) throw new Error("No assignments with due dates are ready to sync.");
   const token = await getCalendarToken();
   const calendars = await listWritableCalendars(token);
   const stored = await chrome.storage.local.get([CALENDAR_MAPPINGS_KEY, CALENDAR_SYNC_KEY, "prairierunSettings"]);

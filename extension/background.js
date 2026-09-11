@@ -58,7 +58,6 @@ function normalizeStoredAssignment(assignment, existing, now, syncedCompletion) 
     sourceFingerprint: JSON.stringify({ title: assignment.title, dueAtLocal }),
     discoveredAt: existing?.discoveredAt || now, updatedAt: now,
     syncState: changed ? (isNew ? "new" : "changed") : (existing?.syncState === "error" ? "error" : "synced"),
-    selected: changed && dueAtLocal ? true : Boolean(existing?.selected && dueAtLocal),
   };
 }
 
@@ -77,7 +76,7 @@ async function saveScanResult(assignments) {
     return normalizeStoredAssignment(item, existing, now, syncedCompletion);
   });
   const scannedIds = new Set(merged.map((item) => item.id));
-  const stale = (stored[ASSIGNMENTS_KEY] || []).filter((item) => !scannedIds.has(item.id)).map((item) => ({ ...item, syncState: "stale", selected: false }));
+  const stale = (stored[ASSIGNMENTS_KEY] || []).filter((item) => !scannedIds.has(item.id)).map((item) => ({ ...item, syncState: "stale" }));
   await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: [...merged, ...stale] });
   return { merged, detectedIds };
 }
@@ -192,8 +191,8 @@ function applyExportResults(results, assignments) {
   results.forEach((result) => {
     const item = assignments.find((entry) => entry.id === result.assignment.id);
     if (!item) return;
-    if (["added", "updated"].includes(result.status)) { item.syncState = "synced"; item.selected = false; item.errorMessage = null; }
-    if (result.status === "failed") { item.syncState = "error"; item.errorMessage = result.reason; item.selected = true; }
+    if (["added", "updated"].includes(result.status)) { item.syncState = "synced"; item.errorMessage = null; }
+    if (result.status === "failed") { item.syncState = "error"; item.errorMessage = result.reason; }
   });
 }
 
@@ -239,11 +238,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     runScan(sender.tab.id, true).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); });
     return true;
   }
-  if (message?.type === "PRAIRIERUN_EXPORT_SELECTED" && sender.tab?.id) {
-    const selected = (message.assignments || []).filter((item) => ["new", "changed", "error"].includes(item.syncState) && item.dueAtLocal);
+  if (message?.type === "PRAIRIERUN_SYNC_ASSIGNMENTS" && sender.tab?.id) {
+    const assignments = (message.assignments || []).filter((item) => ["new", "changed", "error"].includes(item.syncState) && item.dueAtLocal);
     (async () => {
       try {
-        const results = await PrairieRunCalendar.exportAssignments(selected);
+        const results = await PrairieRunCalendar.exportAssignments(assignments);
         const stored = await chrome.storage.local.get(ASSIGNMENTS_KEY);
         const current = stored[ASSIGNMENTS_KEY] || [];
         applyExportResults(results, current);
