@@ -7,7 +7,7 @@ Stage 1's scan and staging workflow can be tested without Google OAuth. To enabl
 3. Configure the OAuth consent screen for the test account.
 4. Create a Chrome Extension OAuth client using the unpacked extension ID shown in `chrome://extensions`.
 5. Add the OAuth client ID and Calendar scope to `manifest.json`.
-6. Implement the token request and Calendar API calls in the export action.
+6. Reload the extension and test **Add to Google Calendar** from the staging export preview.
 
 Required scope for the planned export flow:
 

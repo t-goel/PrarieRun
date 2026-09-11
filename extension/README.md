@@ -22,6 +22,8 @@
 6. Open the extension popup and click **Scan all classes**.
 7. Open the staging area and review the grouped assignments.
 
-## OAuth limitation
+## Google Calendar export
 
-The local scan, staging, and event-preview flows are implemented. Real Google Calendar export still needs a Google Cloud OAuth client ID registered for this extension. The current preview explains that setup is required rather than pretending to export.
+The extension is configured for the PrairieRun development OAuth client and can request Calendar access from the export preview. On the first export, Chrome will ask the signed-in Google account for consent. Export creates or reuses a `PrairieLearn — {class}` calendar and stores a private assignment marker plus Google event ID for duplicate-safe updates.
+
+For a different extension ID or a published build, create a matching Chrome Extension OAuth client and update `manifest.json` before loading the extension.

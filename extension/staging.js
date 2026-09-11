@@ -52,8 +52,32 @@ function showPreview() {
   document.querySelector("#preview").showModal();
 }
 
+async function exportSelected() {
+  const selected = selectedAssignments().filter((item) => item.dueAtLocal);
+  const button = document.querySelector("#confirm-export");
+  button.disabled = true;
+  button.textContent = "Connecting…";
+  try {
+    const results = await window.PrairieRunCalendar.exportAssignments(selected);
+    results.forEach((result) => {
+      const item = assignments.find((entry) => entry.id === result.assignment.id);
+      if (item && ["added", "updated"].includes(result.status)) { item.syncState = "synced"; item.selected = false; }
+    });
+    await persist();
+    document.querySelector("#preview").close();
+    const added = results.filter((result) => result.status === "added").length;
+    const updated = results.filter((result) => result.status === "updated").length;
+    alert(`Calendar sync complete: ${added} added, ${updated} updated.`);
+  } catch (error) {
+    alert(error?.message || "Google Calendar export failed.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Add to Google Calendar";
+  }
+}
+
 document.querySelector("#add-new").addEventListener("click", showPreview);
 document.querySelector("#deselect").addEventListener("click", async () => { assignments.forEach((item) => { item.selected = false; }); await persist(); });
 document.querySelector("#customize").addEventListener("click", () => { customize = !customize; document.querySelector("#customize").textContent = customize ? "Back to bulk view" : "Customize selection"; render(); });
-document.querySelector("#confirm-export").addEventListener("click", (event) => { event.preventDefault(); alert("Google Calendar export needs a Google OAuth client ID. Local staging and preview are ready; configure OAuth before exporting."); });
+document.querySelector("#confirm-export").addEventListener("click", (event) => { event.preventDefault(); exportSelected(); });
 chrome.storage.local.get(ASSIGNMENTS_KEY).then((stored) => { assignments = stored[ASSIGNMENTS_KEY] || []; render(); });
