@@ -4,8 +4,8 @@
 
 This document reflects the repository after the cleanup completed on
 2026-09-11. The original audit findings are preserved below, with each item
-marked by its current disposition. The authoritative cleanup record is listed
-in `cleanup plan.md`.
+marked by its current disposition. Future agent-facing project rules live in
+`AGENTS.md`.
 
 ## Current runtime architecture
 
@@ -70,3 +70,9 @@ manifest's content-script array.
 planning language for staging, selection, and manual export. They are not code
 dependencies. Consolidation or archival remains optional now that current
 behavior is represented in the system design and cleanup checklist.
+
+## Agent instructions
+
+`AGENTS.md` is the current repo-level instruction file for OpenAI/Codex agents.
+Update it after meaningful changes that affect architecture, behavior, testing,
+workflow, or future-agent context.

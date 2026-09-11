@@ -37,8 +37,8 @@ removed.
   prevention, and the strict-greater-than-95% (not equal to 95%) completion rule
   must not regress.
 
-See `systemdesign.md` for implementation evidence and `cleanup plan.md` for the
-completed cleanup record.
+See `systemdesign.md` for implementation evidence and `AGENTS.md` for current
+agent-facing project rules.
 
 ## Product promise
 
