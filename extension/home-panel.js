@@ -4,20 +4,20 @@
   const SETTINGS_KEY = "prairierunSettings";
   const ASSIGNMENTS_KEY = "prairierunAssignments";
   let assignments = [];
-  let settings = { showUndatedAssignments: false };
+  let settings = { showUndatedAssignments: false, assignmentView: "class" };
   let panel;
 
   function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;"); }
   function dueLabel(item) { return PrairieRunView.formatDueDate(item.dueAtLocal); }
   function visibleAssignments() { return assignments.filter((item) => PrairieRunView.displayable(item, settings.showUndatedAssignments)); }
 
-  function rowMarkup(item) {
+  function rowMarkup(item, showCourseTag = false) {
     const status = PrairieRunView.statusLabel(item);
     const syncBadge = item.syncState === "synced" ? "" : `<span class="prr-sync">${escapeHtml(status)}</span>`;
     return `<li class="list-group-item prr-row">
       <div class="prr-row-main"><div>
         <a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(item.title || "Untitled assignment")}</a>
-        <div class="prr-meta text-muted">${syncBadge}${syncBadge ? " " : ""}<span>${escapeHtml(dueLabel(item))}</span>${item.score != null ? ` <span>${item.score}%</span>` : ""}</div>
+        <div class="prr-meta text-muted">${syncBadge}${syncBadge ? " " : ""}<span>${escapeHtml(dueLabel(item))}</span>${showCourseTag ? ` <span class="prr-course-tag">${escapeHtml(item.courseName || "Unknown class")}</span>` : ""}${item.score != null ? ` <span>${item.score}%</span>` : ""}</div>
       </div></div>
       <div class="prr-actions">
         <button type="button" class="btn btn-outline-secondary btn-sm" data-edit-id="${escapeHtml(item.id)}">${item.dueAtLocal ? "Edit date" : "Add date"}</button>
@@ -34,14 +34,25 @@
       if (!groups.has(key)) groups.set(key, { name: item.courseName || key, items: [] });
       groups.get(key).items.push(item);
     });
-    return [...groups.values()].map((group) => {
+    const classGroups = [...groups.values()].map((group) => {
       const uncompleted = group.items.filter((item) => !PrairieRunView.isCompleted(item));
       const completed = group.items.filter(PrairieRunView.isCompleted);
       const topThree = uncompleted.filter((item) => item.dueAtLocal).slice(0, 3);
       const overflow = uncompleted.filter((item) => !topThree.includes(item));
-      const overflowBlock = overflow.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${overflow.length} more upcoming assignment${overflow.length === 1 ? "" : "s"}</summary>${overflow.map(rowMarkup).join("")}</details></li>` : "";
-      const completedBlock = completed.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${completed.length} completed assignment${completed.length === 1 ? "" : "s"}</summary>${completed.map(rowMarkup).join("")}</details></li>` : "";
-      return `<li class="list-group-item prr-group-header">${escapeHtml(group.name)}</li>${topThree.map(rowMarkup).join("")}${overflowBlock}${completedBlock}`;
+      return { ...group, topThree, overflow, completed };
+    });
+    if (settings.assignmentView === "ordered") {
+      const upcoming = classGroups.flatMap((group) => group.topThree).sort(PrairieRunView.compareAssignments);
+      const overflow = classGroups.flatMap((group) => group.overflow).sort(PrairieRunView.compareAssignments);
+      const completed = classGroups.flatMap((group) => group.completed).sort(PrairieRunView.compareAssignments);
+      const overflowBlock = overflow.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${overflow.length} more upcoming assignment${overflow.length === 1 ? "" : "s"}</summary>${overflow.map((item) => rowMarkup(item, true)).join("")}</details></li>` : "";
+      const completedBlock = completed.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${completed.length} completed assignment${completed.length === 1 ? "" : "s"}</summary>${completed.map((item) => rowMarkup(item, true)).join("")}</details></li>` : "";
+      return `${upcoming.map((item) => rowMarkup(item, true)).join("")}${overflowBlock}${completedBlock}`;
+    }
+    return classGroups.map((group) => {
+      const overflowBlock = group.overflow.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${group.overflow.length} more upcoming assignment${group.overflow.length === 1 ? "" : "s"}</summary>${group.overflow.map(rowMarkup).join("")}</details></li>` : "";
+      const completedBlock = group.completed.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${group.completed.length} completed assignment${group.completed.length === 1 ? "" : "s"}</summary>${group.completed.map(rowMarkup).join("")}</details></li>` : "";
+      return `<li class="list-group-item prr-group-header">${escapeHtml(group.name)}</li>${group.topThree.map(rowMarkup).join("")}${overflowBlock}${completedBlock}`;
     }).join("");
   }
 
@@ -49,6 +60,7 @@
     if (!panel) return;
     const current = visibleAssignments();
     panel.querySelector(".prr-count").textContent = `${current.length} current assignment${current.length === 1 ? "" : "s"}`;
+    panel.querySelector("#prr-view-toggle").textContent = settings.assignmentView === "ordered" ? "List by class" : "List in order";
     panel.querySelector("#prr-show-undated").textContent = settings.showUndatedAssignments ? "Hide undated" : "Show undated";
     panel.querySelector(".prr-list").innerHTML = listMarkup();
     panel.querySelectorAll("button[data-edit-id]").forEach((button) => button.addEventListener("click", () => editDueDate(button.dataset.editId)));
@@ -84,10 +96,12 @@
     built.innerHTML = `<div class="card-header bg-primary text-white prr-header">
       <span>PrairieRun <span class="prr-count"></span></span>
       <div class="prr-header-controls">
-        <button type="button" class="btn btn-light btn-sm" id="prr-show-undated">Show undated</button>
+        <button type="button" class="btn btn-outline-light btn-sm" id="prr-view-toggle">List in order</button>
+        <button type="button" class="btn btn-outline-light btn-sm" id="prr-show-undated">Show undated</button>
       </div>
     </div>
     <ul class="list-group list-group-flush prr-list"></ul>`;
+    built.querySelector("#prr-view-toggle").addEventListener("click", async () => { settings.assignmentView = settings.assignmentView === "ordered" ? "class" : "ordered"; await chrome.storage.local.set({ [SETTINGS_KEY]: settings }); render(); });
     built.querySelector("#prr-show-undated").addEventListener("click", async () => { settings.showUndatedAssignments = !settings.showUndatedAssignments; await chrome.storage.local.set({ [SETTINGS_KEY]: settings }); render(); });
     return built;
   }

@@ -7,6 +7,7 @@
 #prairierun-home-panel .prr-row-main { display: flex; align-items: flex-start; }
 #prairierun-home-panel .prr-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; font-size: .78rem; margin-top: .1rem; }
 #prairierun-home-panel .prr-sync { color: #6c757d; }
+#prairierun-home-panel .prr-course-tag { color: #6c757d; font-size: .72rem; }
 #prairierun-home-panel .prr-actions { display: flex; align-items: center; gap: .5rem; }
 #prairierun-home-panel .prr-collapsed summary { cursor: pointer; }
 #prairierun-home-panel a { text-decoration: none; }
