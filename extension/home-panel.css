@@ -8,6 +8,8 @@
 #prairierun-home-panel .prr-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; font-size: .78rem; margin-top: .1rem; }
 #prairierun-home-panel .prr-sync { color: #6c757d; }
 #prairierun-home-panel .prr-course-tag { color: #6c757d; font-size: .72rem; }
+#prairierun-home-panel .prr-progress { position: relative; display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 50%; background: conic-gradient(#35b86b calc(var(--prr-progress) * 1%), #dfe5e9 0); color: #263238; font-size: .58rem; font-weight: 700; }
+#prairierun-home-panel .prr-progress::before { position: absolute; inset: 4px; z-index: 0; border-radius: 50%; background: #fff; content: ""; }
 #prairierun-home-panel .prr-ghost-toggle { border: 1px solid transparent; background: transparent; color: #fff; }
 #prairierun-home-panel .prr-ghost-toggle:hover,
 #prairierun-home-panel .prr-ghost-toggle:focus-visible { border-color: transparent; color: #fff; }

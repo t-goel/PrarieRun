@@ -14,12 +14,15 @@
   function rowMarkup(item, showCourseTag = false) {
     const status = PrairieRunView.statusLabel(item);
     const syncBadge = item.syncState === "synced" ? "" : `<span class="prr-sync">${escapeHtml(status)}</span>`;
+    const score = Number(item.score);
+    const progress = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : null;
+    const progressBadge = progress === null ? "" : `<span class="prr-progress" style="--prr-progress: ${progress}" aria-label="${progress}% complete">${Math.round(progress)}%</span>`;
     return `<li class="list-group-item prr-row">
       <div class="prr-row-main"><div>
         <a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(item.title || "Untitled assignment")}</a>
-        <div class="prr-meta text-muted">${syncBadge}${syncBadge ? " " : ""}<span>${escapeHtml(dueLabel(item))}</span>${showCourseTag ? ` <span class="prr-course-tag">${escapeHtml(item.courseName || "Unknown class")}</span>` : ""}${item.score != null ? ` <span>${item.score}%</span>` : ""}</div>
+        <div class="prr-meta text-muted">${syncBadge}${syncBadge ? " " : ""}<span>${escapeHtml(dueLabel(item))}</span>${showCourseTag ? ` <span class="prr-course-tag">${escapeHtml(item.courseName || "Unknown class")}</span>` : ""}</div>
       </div></div>
-      <div class="prr-actions">
+      <div class="prr-actions">${progressBadge}
         <button type="button" class="btn btn-outline-secondary btn-sm" data-edit-id="${escapeHtml(item.id)}">${item.dueAtLocal ? "Edit date" : "Add date"}</button>
       </div>
     </li>`;
