@@ -228,6 +228,19 @@ async function runScan(sourceTabId, openWhenNew, forceSync = false) {
   }
 }
 
+async function openPrairieRunPopup(windowId) {
+  if (!chrome.action?.openPopup) {
+    debugLog("Automatic popup opening is unavailable in this Chrome version");
+    return;
+  }
+  try {
+    await chrome.action.openPopup({ windowId });
+    debugLog("PrairieRun popup opened", { windowId });
+  } catch (error) {
+    debugLog("Could not open PrairieRun popup", { windowId, error: error?.message || String(error) });
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "PRAIRIERUN_START_SCAN") {
     debugLog("Popup requested scan", { tabId: message.tabId || sender.tab?.id, forceSync: message.forceSync === true });
@@ -236,6 +249,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message?.type === "PRAIRIERUN_HOME_READY" && sender.tab?.id) {
     debugLog("PrairieLearn home reported ready", { tabId: sender.tab.id });
+    openPrairieRunPopup(sender.tab.windowId);
     runScan(sender.tab.id, true).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); });
     return true;
   }
