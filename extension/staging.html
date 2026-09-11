@@ -2,9 +2,8 @@
 <html lang="en">
   <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>PrairieRun Staging</title><link rel="stylesheet" href="staging.css" /></head>
   <body>
-    <header class="topbar"><div><p class="eyebrow">PrairieRun</p><h1>Assignment staging area</h1><p class="muted">Only new or changed assignments with due dates are selected by default.</p></div><div class="top-actions"><button id="quick-add" class="primary">Quick add selected</button><button id="add-new" class="secondary">Review export</button></div></header>
+    <header class="topbar"><div><p class="eyebrow">PrairieRun</p><h1>Assignment staging area</h1><p class="muted">Only new or changed assignments with due dates are selected by default.</p></div><div class="top-actions"><button id="quick-add" class="primary">Quick add selected</button></div></header>
     <main><section class="summary" id="summary"></section><section id="notice" class="notice hidden"></section><section id="assignment-list" class="assignment-list"></section><section id="empty" class="empty hidden">Scan PrairieLearn to build your staging area.</section></main>
-    <dialog id="preview"><form method="dialog" class="dialog-card"><button class="dialog-close" value="cancel" aria-label="Close">×</button><p class="eyebrow">Export preview</p><h2 id="preview-title">Ready to add events</h2><p id="preview-copy" class="muted"></p><ul id="preview-items"></ul><div class="dialog-actions"><button value="cancel" class="secondary">Cancel</button><button id="confirm-export" value="default" class="primary">Connect Google Calendar</button></div></form></dialog>
     <script src="calendar.js"></script><script src="staging.js"></script>
   </body>
 </html>

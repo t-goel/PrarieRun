@@ -70,17 +70,9 @@ async function editDueDate(id) {
   else { const normalized = value.trim().replace("T", " "); if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(normalized)) { alert("Use YYYY-MM-DD HH:MM."); return; } item.manuallyEnteredDueAt = normalized; item.dueAtLocal = normalized; item.syncState = item.syncState === "new" ? "new" : "changed"; item.selected = true; }
   await persist();
 }
-function showPreview() {
-  const selected = selectedAssignments();
-  document.querySelector("#preview-title").textContent = `Ready to add ${selected.length} event${selected.length === 1 ? "" : "s"}`;
-  document.querySelector("#preview-copy").textContent = "Each timed event runs from one hour before its due time through the due time. Assignments without due dates are excluded.";
-  document.querySelector("#preview-items").innerHTML = selected.slice(0, 20).map((item) => `<li>${escapeHtml(item.courseName)} — ${escapeHtml(item.title)} — ${escapeHtml(dueLabel(item))}</li>`).join("");
-  document.querySelector("#preview").showModal();
-}
-
 async function exportSelected(closeOnSuccess = false) {
   const selected = selectedAssignments().filter((item) => item.dueAtLocal);
-  const button = document.querySelector("#confirm-export");
+  const button = document.querySelector("#quick-add");
   button.disabled = true;
   button.textContent = "Connecting…";
   try {
@@ -91,7 +83,6 @@ async function exportSelected(closeOnSuccess = false) {
       if (item && result.status === "failed") { item.syncState = "error"; item.errorMessage = result.reason; item.selected = true; }
     });
     await persist();
-    document.querySelector("#preview").close();
     const added = results.filter((result) => result.status === "added").length;
     const updated = results.filter((result) => result.status === "updated").length;
     const failed = results.filter((result) => result.status === "failed");
@@ -104,20 +95,17 @@ async function exportSelected(closeOnSuccess = false) {
     alert(error?.message || "Google Calendar export failed.");
   } finally {
     button.disabled = false;
-    button.textContent = "Add to Google Calendar";
+    button.textContent = "Quick add selected";
   }
 }
 
-document.querySelector("#add-new").addEventListener("click", showPreview);
 function updateExportButtons() {
   const enabled = assignments.some((item) => item.selected && hasHardChange(item));
   document.querySelector("#quick-add").disabled = !enabled;
-  document.querySelector("#add-new").disabled = !enabled;
 }
 
 document.querySelector("#quick-add").addEventListener("click", () => {
   if (!selectedAssignments().some(hasHardChange)) return;
   exportSelected(true);
 });
-document.querySelector("#confirm-export").addEventListener("click", (event) => { event.preventDefault(); if (selectedAssignments().some(hasHardChange)) exportSelected(); });
 chrome.storage.local.get(ASSIGNMENTS_KEY).then((stored) => { assignments = stored[ASSIGNMENTS_KEY] || []; render(); });
