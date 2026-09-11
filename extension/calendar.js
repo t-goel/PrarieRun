@@ -24,16 +24,27 @@ async function getCalendarToken() {
   return token;
 }
 
-async function calendarRequest(path, options = {}, token) {
-  const response = await fetch(`${CALENDAR_API}${path}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(options.headers || {}) },
-  });
-  if (!response.ok) {
+async function calendarRequest(path, options = {}, token, attempt = 0) {
+  try {
+    const response = await fetch(`${CALENDAR_API}${path}`, {
+      ...options,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(options.headers || {}) },
+    });
+    if (response.ok) return response.status === 204 ? null : response.json();
     const body = await response.text();
+    if ((response.status === 429 || response.status >= 500) && attempt < 2) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * (2 ** attempt)));
+      return calendarRequest(path, options, token, attempt + 1);
+    }
     throw new Error(`Google Calendar request failed (${response.status}): ${body.slice(0, 240)}`);
+  } catch (error) {
+    const message = String(error?.message || "");
+    if (attempt < 2 && !message.startsWith("Google Calendar request failed (4") && !message.startsWith("Google Calendar request failed (5")) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * (2 ** attempt)));
+      return calendarRequest(path, options, token, attempt + 1);
+    }
+    throw error;
   }
-  return response.status === 204 ? null : response.json();
 }
 
 async function listWritableCalendars(token) {
@@ -95,18 +106,22 @@ async function exportAssignments(assignments) {
   const results = [];
   for (const assignment of assignments) {
     if (!assignment.dueAtLocal) { results.push({ assignment, status: "skipped", reason: "Missing due date" }); continue; }
-    const courseKey = assignment.courseInstanceId || assignment.courseName;
-    const calendar = mappings[courseKey] ? calendars.find((item) => item.id === mappings[courseKey]) : await getOrCreateClassCalendar(assignment.courseName, calendars, token);
-    if (!calendar) throw new Error(`Could not find a calendar for ${assignment.courseName}.`);
-    mappings[courseKey] = calendar.id;
-    const resource = eventResource(assignment, calendar.id);
-    const known = sync[assignment.id];
-    let event = known?.googleEventId ? { id: known.googleEventId } : await findMarkedEvent(assignment, calendar.id, token);
-    let status;
-    if (event?.id) { await calendarRequest(`/calendars/${encodeURIComponent(calendar.id)}/events/${encodeURIComponent(event.id)}`, { method: "PATCH", body: JSON.stringify(resource) }, token); status = "updated"; }
-    else { event = await calendarRequest(`/calendars/${encodeURIComponent(calendar.id)}/events`, { method: "POST", body: JSON.stringify(resource) }, token); status = "added"; }
-    sync[assignment.id] = { assignmentId: assignment.id, calendarId: calendar.id, googleEventId: event.id, lastSyncedAt: new Date().toISOString(), eventFingerprint: assignment.sourceFingerprint, syncStatus: "synced" };
-    results.push({ assignment, calendar, status, eventId: event.id });
+    try {
+      const courseKey = assignment.courseInstanceId || assignment.courseName;
+      const calendar = mappings[courseKey] ? calendars.find((item) => item.id === mappings[courseKey]) : await getOrCreateClassCalendar(assignment.courseName, calendars, token);
+      if (!calendar) throw new Error(`Could not find a calendar for ${assignment.courseName}.`);
+      mappings[courseKey] = calendar.id;
+      const resource = eventResource(assignment, calendar.id);
+      const known = sync[assignment.id];
+      let event = known?.googleEventId ? { id: known.googleEventId } : await findMarkedEvent(assignment, calendar.id, token);
+      let status;
+      if (event?.id) { await calendarRequest(`/calendars/${encodeURIComponent(calendar.id)}/events/${encodeURIComponent(event.id)}`, { method: "PATCH", body: JSON.stringify(resource) }, token); status = "updated"; }
+      else { event = await calendarRequest(`/calendars/${encodeURIComponent(calendar.id)}/events`, { method: "POST", body: JSON.stringify(resource) }, token); status = "added"; }
+      sync[assignment.id] = { assignmentId: assignment.id, calendarId: calendar.id, googleEventId: event.id, lastSyncedAt: new Date().toISOString(), eventFingerprint: assignment.sourceFingerprint, syncStatus: "synced" };
+      results.push({ assignment, calendar, status, eventId: event.id });
+    } catch (error) {
+      results.push({ assignment, status: "failed", reason: error?.message || "Unknown Calendar API error" });
+    }
   }
   await chrome.storage.local.set({ [CALENDAR_MAPPINGS_KEY]: mappings, [CALENDAR_SYNC_KEY]: sync });
   return results;

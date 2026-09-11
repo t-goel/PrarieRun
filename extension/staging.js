@@ -11,7 +11,7 @@ function dueLabel(item) { return item.dueAtLocal ? `${item.dueAtLocal}${item.tim
 function selectedAssignments() { return assignments.filter((item) => item.selected); }
 
 function renderAssignment(item) {
-  const status = item.syncState === "changed" ? "Changed" : item.syncState === "new" ? "New" : item.syncState === "stale" ? "Stale" : "Synced";
+  const status = item.syncState === "changed" ? "Changed" : item.syncState === "new" ? "New" : item.syncState === "stale" ? "Stale" : item.syncState === "error" ? "Error" : "Synced";
   return `<div class="assignment"><input type="checkbox" data-id="${escapeHtml(item.id)}" ${item.selected ? "checked" : ""} ${customize ? "" : "disabled"} aria-label="Select ${escapeHtml(item.title)}" /><div><div class="assignment-title">${escapeHtml(item.title || "Untitled assignment")}</div><div class="assignment-meta"><span class="status-pill">${status}</span><span class="${item.dueAtLocal ? "" : "status-pill warning"}">${escapeHtml(dueLabel(item))}</span>${item.score != null ? `<span>${item.score}%</span>` : ""}</div></div><div class="assignment-actions"><button class="edit-due" data-edit-id="${escapeHtml(item.id)}">${item.dueAtLocal ? "Edit" : "Add due date"}</button><a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noreferrer">View</a></div></div>`;
 }
 
@@ -19,8 +19,9 @@ function render() {
   const newCount = assignments.filter((item) => item.syncState === "new").length;
   const changedCount = assignments.filter((item) => item.syncState === "changed").length;
   const syncedCount = assignments.filter((item) => item.syncState === "synced").length;
+  const errorCount = assignments.filter((item) => item.syncState === "error").length;
   const missingDateCount = assignments.filter((item) => !item.dueAtLocal).length;
-  summaryElement.innerHTML = [`<span class="chip">${newCount} new</span>`, `<span class="chip">${changedCount} changed</span>`, `<span class="chip">${syncedCount} synced</span>`, missingDateCount ? `<span class="chip">${missingDateCount} need a date</span>` : ""].join("");
+  summaryElement.innerHTML = [`<span class="chip">${newCount} new</span>`, `<span class="chip">${changedCount} changed</span>`, `<span class="chip">${syncedCount} synced</span>`, errorCount ? `<span class="chip warning-chip">${errorCount} error${errorCount === 1 ? "" : "s"}</span>` : "", missingDateCount ? `<span class="chip">${missingDateCount} need a date</span>` : ""].join("");
   noticeElement.classList.toggle("hidden", missingDateCount === 0);
   noticeElement.textContent = missingDateCount ? `${missingDateCount} assignment${missingDateCount === 1 ? "" : "s"} without a due date stay in staging but are excluded from the bulk action. Use Customize selection to add a due date.` : "";
   emptyElement.classList.toggle("hidden", assignments.length > 0);
@@ -62,12 +63,15 @@ async function exportSelected() {
     results.forEach((result) => {
       const item = assignments.find((entry) => entry.id === result.assignment.id);
       if (item && ["added", "updated"].includes(result.status)) { item.syncState = "synced"; item.selected = false; }
+      if (item && result.status === "failed") { item.syncState = "error"; item.errorMessage = result.reason; item.selected = true; }
     });
     await persist();
     document.querySelector("#preview").close();
     const added = results.filter((result) => result.status === "added").length;
     const updated = results.filter((result) => result.status === "updated").length;
-    alert(`Calendar sync complete: ${added} added, ${updated} updated.`);
+    const failed = results.filter((result) => result.status === "failed");
+    const detail = failed.length ? `\n\nFailed items remain selected for retry:\n${failed.map((result) => `• ${result.assignment.title}: ${result.reason}`).join("\n")}` : "";
+    alert(`Calendar sync complete: ${added} added, ${updated} updated, ${failed.length} failed.${detail}`);
   } catch (error) {
     alert(error?.message || "Google Calendar export failed.");
   } finally {

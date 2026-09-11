@@ -16,6 +16,7 @@ h2 { margin: 0 0 7px; font-size: 18px; }
 .text-button { border: 0; background: transparent; color: #6a3fb5; font-size: 12px; }
 .summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .chip { padding: 7px 10px; border-radius: 15px; background: #e9eef3; color: #405263; font-size: 12px; }
+.warning-chip { background: #fff1c7; color: #765d13; }
 .notice { margin-bottom: 18px; padding: 12px 14px; border: 1px solid #f0d38a; border-radius: 9px; background: #fff8e7; color: #69521d; font-size: 13px; }
 .hidden { display: none !important; }
 .course { margin-bottom: 18px; overflow: hidden; border: 1px solid #dfe4e9; border-radius: 10px; background: #fff; }
