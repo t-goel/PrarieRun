@@ -161,34 +161,8 @@ async function scanCourse(url, progress, index, total) {
     }
     debugLog("Course assignments extracted", { tabId: tab.id, count: data.assignments?.length || 0 });
     await setSyncStatus({ state: "scanning", current: `Scanning ${data.course?.courseName || url}`, completed: index, total, found: progress.found });
-    const assignments = [];
-    for (let assignmentIndex = 0; assignmentIndex < (data.assignments || []).length; assignmentIndex += 1) {
-      const assignment = data.assignments[assignmentIndex];
-      assignments.push(await hydrateAssignmentDetail(assignment, assignmentIndex, data.assignments.length));
-    }
-    return assignments;
+    return data.assignments || [];
   } finally { await chrome.tabs.remove(tab.id).catch(() => undefined); }
-}
-
-async function hydrateAssignmentDetail(assignment, index, total) {
-  if (!assignment?.sourceUrl || !/\/assessment_instance\/\d+\/?(?:\?|$)/.test(assignment.sourceUrl)) return assignment;
-  debugLog("Opening assignment detail tab", { url: assignment.sourceUrl, index: index + 1, total });
-  const tab = await chrome.tabs.create({ url: assignment.sourceUrl, active: false });
-  try {
-    await waitForTabComplete(tab.id);
-    const data = await readPageWhenReady(tab.id);
-    if (data.pageType !== "assignment" || !data.assignment) {
-      debugLog("Assignment detail returned unexpected page", { tabId: tab.id, pageType: data.pageType, url: assignment.sourceUrl });
-      return assignment;
-    }
-    debugLog("Assignment detail extracted", { tabId: tab.id, assignmentId: data.assignment.id, dueAtLocal: data.assignment.dueAtLocal });
-    return { ...assignment, ...data.assignment, courseInstanceId: assignment.courseInstanceId, courseName: assignment.courseName, title: assignment.title || data.assignment.title, sourceUrl: assignment.sourceUrl };
-  } catch (error) {
-    debugLog("Assignment detail read failed; using course row", { url: assignment.sourceUrl, error: error.message });
-    return assignment;
-  } finally {
-    await chrome.tabs.remove(tab.id).catch(() => undefined);
-  }
 }
 
 async function startScan(sourceTabId) {

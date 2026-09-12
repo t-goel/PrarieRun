@@ -66,14 +66,15 @@ function parseDueInfo(visibleText, accessDetailsHtml) {
     if (match) endCells.push({ local: match[1], timezone: match[2] });
   }
 
-  // Access details contain Start and End columns. Use the last finite end
-  // timestamp, which handles multiple credit windows without guessing from a
-  // display string that omits the year.
   const finiteEnd = endCells.length ? endCells[endCells.length - 1] : null;
   const untilMatch = rawVisible.match(/until\s+(.+)$/i);
+  const visibleDeadline = rawVisible.match(/until\s+(\d{1,2}):(\d{2}),\s*(?:[A-Za-z]+,\s*)?([A-Za-z]+)\s+(\d{1,2})/i);
+  const monthNumber = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 }[visibleDeadline?.[3]?.slice(0, 3).toLowerCase()];
+  const year = finiteEnd ? finiteEnd.local.slice(0, 4) : String(new Date().getFullYear());
+  const visibleDueAtLocal = visibleDeadline && monthNumber ? `${year}-${String(monthNumber).padStart(2, "0")}-${String(visibleDeadline[4]).padStart(2, "0")} ${String(visibleDeadline[1]).padStart(2, "0")}:${visibleDeadline[2]}:00` : null;
 
   return {
-    dueAtLocal: finiteEnd?.local || null,
+    dueAtLocal: visibleDueAtLocal || finiteEnd?.local || null,
     timezone: finiteEnd?.timezone || null,
     dueText: untilMatch ? untilMatch[1].replace(/[.\s]+$/, "") : null,
     rawVisible,

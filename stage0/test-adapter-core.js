@@ -25,9 +25,11 @@ test("scores map to the configured completion threshold", () => {
 test("access details preserve the exact local timestamp and timezone", () => {
   const details = "&lt;table&gt;&lt;tr&gt;&lt;td&gt;100&lt;/td&gt;&lt;td&gt;2026-08-26 14:15:00 (CDT)&lt;/td&gt;&lt;td&gt;2026-09-11 23:59:59 (CDT)&lt;/td&gt;&lt;/tr&gt;";
   const result = adapter.parseDueInfo("100% until 23:59, Fri, Sep 11", details);
-  assert.equal(result.dueAtLocal, "2026-09-11 23:59:59");
+  assert.equal(result.dueAtLocal, "2026-09-11 23:59:00");
   assert.equal(result.timezone, "CDT");
   assert.equal(result.dueText, "23:59, Fri, Sep 11");
+  const conflicting = adapter.parseDueInfo("100% until 23:59, Mon, Sep 14", details.replace("2026-09-11", "2026-09-23"));
+  assert.equal(conflicting.dueAtLocal, "2026-09-14 23:59:00");
 });
 
 test("base labels and instance titles normalize to one assignment key", () => {
