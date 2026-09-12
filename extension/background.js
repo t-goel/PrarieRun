@@ -7,6 +7,8 @@ const BACKGROUND_CALENDAR_SYNC_KEY = "prairierunCalendarSync";
 const DEBUG_LOG_KEY = "prairierunDebugLog";
 const defaultSettings = { prairieLearnOrigin: "https://us.prairielearn.com", completionThreshold: 95, defaultReminderMinutes: 10, notificationLeadMinutes: 240, showUndatedAssignments: false, assignmentView: "class" };
 let scanInFlight = false;
+let queuedScan = false;
+let queuedScanTabId = null;
 const debugEntries = [];
 
 function debugLog(message, details) {
@@ -196,30 +198,55 @@ function applyExportResults(results, assignments) {
   });
 }
 
+async function sendHomeUpdate(tabId, assignments, exportResults = []) {
+  chrome.tabs.sendMessage(tabId, { type: "PRAIRIERUN_HOME_SCAN_RESULT", assignments, exportResults }).catch((error) => debugLog("Could not update PrairieLearn page", { tabId, error: error.message }));
+}
+
 async function notifyHomeTab(tabId, assignments, detectedIds) {
-  let exportResults = [];
+  await sendHomeUpdate(tabId, assignments);
   const eligible = assignments.filter((item) => detectedIds.has(item.id) && item.dueAtLocal && isCurrentAssignment(item));
   if (eligible.length) {
     debugLog("Automatically synchronizing Calendar assignments", { count: eligible.length });
-    exportResults = await PrairieRunCalendar.exportAssignments(eligible);
-    applyExportResults(exportResults, assignments);
-    await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments });
+    try {
+      const exportResults = await PrairieRunCalendar.exportAssignments(eligible);
+      applyExportResults(exportResults, assignments);
+      await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments });
+      await sendHomeUpdate(tabId, assignments, exportResults);
+    } catch (error) {
+      debugLog("Automatic Calendar synchronization failed", { error: error.message });
+      await setSyncStatus({ state: "error", current: error.message });
+      await sendHomeUpdate(tabId, assignments);
+    }
   }
-  chrome.tabs.sendMessage(tabId, { type: "PRAIRIERUN_HOME_SCAN_RESULT", assignments, exportResults }).catch(() => undefined);
+}
+
+async function scanOnce(sourceTabId) {
+  const scan = await startScan(sourceTabId);
+  const assignments = scan.merged;
+  await notifyHomeTab(sourceTabId, assignments, scan.detectedIds);
+  return { assignments };
 }
 
 async function runScan(sourceTabId) {
-  if (scanInFlight) { debugLog("Scan ignored because another scan is already running"); return { assignments: [], skipped: true }; }
+  if (scanInFlight) {
+    queuedScan = true;
+    queuedScanTabId = sourceTabId;
+    debugLog("Scan queued because another scan is already running", { sourceTabId });
+    return { assignments: [], queued: true };
+  }
   scanInFlight = true;
   debugLog("Scan lock acquired", { sourceTabId });
   try {
-    const scan = await startScan(sourceTabId);
-    const assignments = scan.merged;
-    await notifyHomeTab(sourceTabId, assignments, scan.detectedIds);
-    return { assignments };
+    return await scanOnce(sourceTabId);
   } finally {
     scanInFlight = false;
     debugLog("Scan lock released");
+    if (queuedScan && queuedScanTabId) {
+      const nextTabId = queuedScanTabId;
+      queuedScan = false;
+      queuedScanTabId = null;
+      queueMicrotask(() => runScan(nextTabId));
+    }
   }
 }
 
@@ -236,8 +263,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message?.type === "PRAIRIERUN_ASSIGNMENT_UPDATED" && sender.tab?.id) {
     const assignment = message.assignment;
-    if (!assignment?.id || !assignment.dueAtLocal || !["new", "changed", "error"].includes(assignment.syncState)) {
+    if (!assignment?.id || !["new", "changed", "error"].includes(assignment.syncState)) {
       sendResponse({ ok: true, skipped: true });
+      return true;
+    }
+    if (!assignment.dueAtLocal) {
+      PrairieRunCalendar.removeAssignmentEvent(assignment).then((result) => sendResponse({ ok: true, results: [result], assignments: [assignment] })).catch((error) => sendResponse({ ok: false, error: error?.message || "Could not remove the Calendar event." }));
       return true;
     }
     PrairieRunCalendar.exportAssignments([assignment]).then(async (results) => {
@@ -255,12 +286,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+async function findPrairieLearnHomeTab() {
+  const tabs = await chrome.tabs.query({ url: "https://us.prairielearn.com/*" });
+  return tabs.find((tab) => !/\/pl\/course_instance\/\d+/.test(tab.url || "")) || null;
+}
+
+async function resyncStoredAssignments() {
+  const stored = await chrome.storage.local.get(ASSIGNMENTS_KEY);
+  const assignments = (stored[ASSIGNMENTS_KEY] || []).filter((item) => item.dueAtLocal && item.syncState !== "stale");
+  if (!assignments.length) return;
+  debugLog("Resynchronizing Calendar assignments after reminder setting change", { count: assignments.length });
+  const results = await PrairieRunCalendar.exportAssignments(assignments);
+  applyExportResults(results, assignments);
+  const current = stored[ASSIGNMENTS_KEY] || [];
+  applyExportResults(results, current);
+  await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: current });
+  const tabs = await chrome.tabs.query({ url: "https://us.prairielearn.com/*" });
+  await Promise.all(tabs.filter((tab) => tab.id).map((tab) => sendHomeUpdate(tab.id, current, results)));
+}
+
 chrome.storage.onChanged.addListener((changes, areaName) => {
   const settingChange = changes[SETTINGS_KEY];
-  if (areaName !== "local" || !settingChange || settingChange.oldValue?.completionThreshold === settingChange.newValue?.completionThreshold) return;
-  chrome.tabs.query({ url: "https://us.prairielearn.com/*" }).then((tabs) => {
-    const homeTab = tabs.find((tab) => !/\/pl\/course_instance\/\d+/.test(tab.url || ""));
-    if (homeTab?.id) return runScan(homeTab.id, false).catch((error) => debugLog("Could not refresh after completion threshold change", { error: error.message }));
-    return undefined;
-  }).catch((error) => debugLog("Could not find PrairieLearn tab for settings refresh", { error: error.message }));
+  if (areaName !== "local" || !settingChange) return;
+  const oldSettings = settingChange.oldValue || {};
+  const newSettings = settingChange.newValue || {};
+  if (oldSettings.completionThreshold !== newSettings.completionThreshold) {
+    findPrairieLearnHomeTab().then((homeTab) => homeTab?.id ? runScan(homeTab.id) : undefined).catch((error) => debugLog("Could not refresh after completion threshold change", { error: error.message }));
+  }
+  if (oldSettings.notificationLeadMinutes !== newSettings.notificationLeadMinutes) {
+    resyncStoredAssignments().catch((error) => debugLog("Could not resynchronize Calendar reminders", { error: error.message }));
+  }
 });

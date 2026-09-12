@@ -171,5 +171,18 @@ async function exportAssignments(assignments) {
   return results;
 }
 
-globalThis.PrairieRunCalendar = { exportAssignments };
+async function removeAssignmentEvent(assignment) {
+  const token = await getCalendarToken();
+  const stored = await chrome.storage.local.get([CALENDAR_MAPPINGS_KEY, CALENDAR_SYNC_KEY]);
+  const sync = stored[CALENDAR_SYNC_KEY] || {};
+  const mapping = sync[assignment.id];
+  if (!mapping?.calendarId) return { status: "skipped", assignment };
+  const event = await findMarkedEvent(assignment, mapping.calendarId, token);
+  if (event?.id) await calendarRequest(`/calendars/${encodeURIComponent(mapping.calendarId)}/events/${encodeURIComponent(event.id)}`, { method: "DELETE" }, token);
+  delete sync[assignment.id];
+  await chrome.storage.local.set({ [CALENDAR_SYNC_KEY]: sync });
+  return { status: event?.id ? "removed" : "skipped", assignment, eventId: event?.id };
+}
+
+globalThis.PrairieRunCalendar = { exportAssignments, removeAssignmentEvent };
 })();
