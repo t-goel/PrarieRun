@@ -47,17 +47,19 @@ function normalizeStoredAssignment(assignment, existing, now, syncedCompletion) 
   const referenceCompletion = syncedCompletion || existing?.completionStatus;
   const completionChanged = Boolean(existing && assignment.completionStatus && referenceCompletion && referenceCompletion !== assignment.completionStatus);
   const isNew = !existing;
-  const changed = isNew || completionChanged;
   const existingClean = { ...(existing || {}) };
   delete existingClean.manualCompletionStatus;
   delete existingClean.sourceCompletionStatus;
   const manuallyEnteredDueAt = existing?.manuallyEnteredDueAt || null;
   const dueAtLocal = manuallyEnteredDueAt || assignment.dueAtLocal || null;
+  const sourceFingerprint = JSON.stringify({ title: assignment.title, dueAtLocal, timezone: assignment.timezone || null });
+  const sourceChanged = Boolean(existing && existing.sourceFingerprint !== sourceFingerprint);
+  const changed = isNew || completionChanged || sourceChanged;
   return {
     ...existingClean, ...assignment, id: assignment.id, dueAtLocal, manuallyEnteredDueAt,
     score: assignment.score ?? existing?.score ?? null,
     completionStatus: assignment.completionStatus || existing?.completionStatus || "unknown",
-    sourceFingerprint: JSON.stringify({ title: assignment.title, dueAtLocal }),
+    sourceFingerprint,
     discoveredAt: existing?.discoveredAt || now, updatedAt: now,
     syncState: changed ? (isNew ? "new" : "changed") : (existing?.syncState === "error" ? "error" : "synced"),
   };
@@ -74,7 +76,9 @@ async function saveScanResult(assignments) {
     const syncedCompletion = calendarSync[item.id]?.completionStatus;
     const referenceCompletion = syncedCompletion || existing?.completionStatus;
     const completionChanged = Boolean(existing && item.completionStatus && referenceCompletion && referenceCompletion !== item.completionStatus);
-    if (!existing || completionChanged) detectedIds.add(item.id);
+    const incomingFingerprint = JSON.stringify({ title: item.title, dueAtLocal: existing?.manuallyEnteredDueAt || item.dueAtLocal || null, timezone: item.timezone || null });
+    const sourceChanged = Boolean(existing && existing.sourceFingerprint !== incomingFingerprint);
+    if (!existing || completionChanged || sourceChanged) detectedIds.add(item.id);
     return normalizeStoredAssignment(item, existing, now, syncedCompletion);
   });
   const scannedIds = new Set(merged.map((item) => item.id));

@@ -45,12 +45,10 @@
       return { ...group, topThree, overflow, completed };
     });
     if (settings.assignmentView === "ordered") {
-      const upcoming = classGroups.flatMap((group) => group.topThree).sort(PrairieRunView.compareAssignments);
-      const overflow = classGroups.flatMap((group) => group.overflow).sort(PrairieRunView.compareAssignments);
+      const upcoming = classGroups.flatMap((group) => [...group.topThree, ...group.overflow]).sort(PrairieRunView.compareAssignments);
       const completed = classGroups.flatMap((group) => group.completed).sort(PrairieRunView.compareAssignments);
-      const overflowBlock = overflow.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${overflow.length} more upcoming assignment${overflow.length === 1 ? "" : "s"}</summary>${overflow.map((item) => rowMarkup(item, true)).join("")}</details></li>` : "";
       const completedBlock = completed.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${completed.length} completed assignment${completed.length === 1 ? "" : "s"}</summary>${completed.map((item) => rowMarkup(item, true)).join("")}</details></li>` : "";
-      return `${upcoming.map((item) => rowMarkup(item, true)).join("")}${overflowBlock}${completedBlock}`;
+      return `${upcoming.map((item) => rowMarkup(item, true)).join("")}${completedBlock}`;
     }
     return classGroups.map((group) => {
       const overflowBlock = group.overflow.length ? `<li class="list-group-item prr-collapsed"><details><summary class="text-muted">Show ${group.overflow.length} more upcoming assignment${group.overflow.length === 1 ? "" : "s"}</summary>${group.overflow.map(rowMarkup).join("")}</details></li>` : "";
