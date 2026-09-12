@@ -141,9 +141,10 @@
   function update(nextAssignments) { assignments = nextAssignments || assignments; if (panel) render(); }
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== "local" || !changes[SETTINGS_KEY]) return;
-    settings = { ...settings, ...(changes[SETTINGS_KEY].newValue || {}) };
-    render();
+    if (areaName !== "local") return;
+    if (changes[ASSIGNMENTS_KEY]) assignments = changes[ASSIGNMENTS_KEY].newValue || assignments;
+    if (changes[SETTINGS_KEY]) settings = { ...settings, ...(changes[SETTINGS_KEY].newValue || {}) };
+    if (changes[ASSIGNMENTS_KEY] || changes[SETTINGS_KEY]) render();
   });
 
   window.PrairieRunHomePanel = { mount, update };

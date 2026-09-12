@@ -30,6 +30,7 @@
   }
 
   function displayable(item, showUndated, now = new Date()) {
+    if (item?.syncState === "stale") return false;
     return isCurrent(item, now) || (showUndated && !item?.dueAtLocal);
   }
 

@@ -49,8 +49,13 @@ function refreshState() {
     if (!response?.ok) return;
     applySettings(response.settings);
     if (response.sync?.state === "scanning") showStatus(`${response.sync.current || "Scanning…"} (${response.sync.found || 0} found)`);
+    if (response.sync?.state === "complete") contextElement.textContent = "PrairieLearn detected.";
     if (response.sync?.state === "error") showStatus(response.sync.current || "Scan failed.", true);
   }).catch((error) => showStatus(error.message, true));
+}
+function monitorRefresh(attempt = 0) {
+  refreshState();
+  if (attempt < 120) setTimeout(() => monitorRefresh(attempt + 1), 500);
 }
 
 chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
@@ -96,6 +101,7 @@ completionThresholdElement.addEventListener("change", async () => {
   settings.completionThreshold = Math.round(threshold);
   await saveSettings();
   contextElement.textContent = "Refreshing assignments…";
+  monitorRefresh();
 });
 
 resetDataButton.addEventListener("click", async () => {
