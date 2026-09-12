@@ -5,7 +5,7 @@ const SYNC_KEY = "prairierunSyncStatus";
 const SETTINGS_KEY = "prairierunSettings";
 const BACKGROUND_CALENDAR_SYNC_KEY = "prairierunCalendarSync";
 const DEBUG_LOG_KEY = "prairierunDebugLog";
-const defaultSettings = { prairieLearnOrigin: "https://us.prairielearn.com", completionThreshold: 95, defaultReminderMinutes: 10, notificationLeadMinutes: 240, timezone: "CST", showUndatedAssignments: false, assignmentView: "class" };
+const defaultSettings = { prairieLearnOrigin: "https://us.prairielearn.com", completionThreshold: 95, defaultReminderMinutes: 10, notificationLeadMinutes: 240, showUndatedAssignments: false, assignmentView: "class" };
 let scanInFlight = false;
 const debugEntries = [];
 

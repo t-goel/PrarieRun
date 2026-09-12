@@ -2,7 +2,6 @@ const scanButton = document.querySelector("#scan");
 const contextElement = document.querySelector("#context");
 const notificationLeadElement = document.querySelector("#notification-lead-hours");
 const completionThresholdElement = document.querySelector("#completion-threshold");
-const timezoneElement = document.querySelector("#timezone");
 const resetDataButton = document.querySelector("#reset-data");
 let settings = { notificationLeadMinutes: 240, completionThreshold: 95 };
 
@@ -15,9 +14,9 @@ function applySettings(nextSettings = {}) {
   const minutes = Number(settings.notificationLeadMinutes);
   notificationLeadElement.value = Number.isFinite(minutes) ? String(minutes / 60) : "4";
   completionThresholdElement.value = Number.isFinite(Number(settings.completionThreshold)) ? String(settings.completionThreshold) : "95";
-  timezoneElement.value = settings.timezone || "CST";
 }
 function saveSettings() {
+  delete settings.timezone;
   return chrome.storage.local.set({ prairierunSettings: settings });
 }
 function sendRuntimeMessage(message, timeoutMs = 10000) {
@@ -87,11 +86,6 @@ notificationLeadElement.addEventListener("change", async () => {
   await saveSettings();
 });
 
-timezoneElement.addEventListener("change", async () => {
-  settings.timezone = timezoneElement.value;
-  await saveSettings();
-});
-
 completionThresholdElement.addEventListener("change", async () => {
   const threshold = Number(completionThresholdElement.value);
   if (!Number.isFinite(threshold) || threshold < 0 || threshold > 100) {
@@ -110,6 +104,6 @@ resetDataButton.addEventListener("click", async () => {
   await chrome.storage.local.clear();
   await chrome.storage.session.clear();
   resetDataButton.disabled = false;
-  applySettings({ notificationLeadMinutes: 240, completionThreshold: 95, timezone: "CST" });
+  applySettings({ notificationLeadMinutes: 240, completionThreshold: 95 });
   showStatus("Test data cleared. Refresh PrairieLearn to scan again.");
 });
