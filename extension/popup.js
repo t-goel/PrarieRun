@@ -95,7 +95,7 @@ completionThresholdElement.addEventListener("change", async () => {
   }
   settings.completionThreshold = Math.round(threshold);
   await saveSettings();
-  scanButton.click();
+  contextElement.textContent = "Refreshing assignments…";
 });
 
 resetDataButton.addEventListener("click", async () => {

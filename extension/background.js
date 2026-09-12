@@ -254,3 +254,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 });
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local" || !changes[SETTINGS_KEY] || !Object.prototype.hasOwnProperty.call(changes[SETTINGS_KEY].newValue || {}, "completionThreshold")) return;
+  chrome.tabs.query({ url: "https://us.prairielearn.com/*" }).then((tabs) => {
+    const homeTab = tabs.find((tab) => !/\/pl\/course_instance\/\d+/.test(tab.url || ""));
+    if (homeTab?.id) return runScan(homeTab.id, false).catch((error) => debugLog("Could not refresh after completion threshold change", { error: error.message }));
+    return undefined;
+  }).catch((error) => debugLog("Could not find PrairieLearn tab for settings refresh", { error: error.message }));
+});
