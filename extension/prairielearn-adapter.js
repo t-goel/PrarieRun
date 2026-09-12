@@ -121,7 +121,7 @@ function getCourseLinks(document, location = window.location) {
     .filter((link) => link.courseInstanceId && link.href && !seen.has(link.courseInstanceId) && seen.add(link.courseInstanceId));
 }
 
-function parseAssessmentRow(row, location, course) {
+function parseAssessmentRow(row, location, course, threshold = 95) {
   const anchors = [...row.querySelectorAll("a[href]")];
   const candidates = anchors
     .map((anchor) => {
@@ -155,7 +155,7 @@ function parseAssessmentRow(row, location, course) {
     assessmentId,
     instanceId: instance ? contentCandidate.parts.id : null,
     score,
-    completionStatus: completionFromScore(score),
+    completionStatus: completionFromScore(score, threshold),
     dueAtLocal: due.dueAtLocal,
     dueText: due.dueText,
     timezone: due.timezone,
@@ -164,10 +164,10 @@ function parseAssessmentRow(row, location, course) {
   };
 }
 
-function extractAssignments(document, location = window.location) {
+function extractAssignments(document, location = window.location, threshold = 95) {
   const course = getCourseIdentity(document, location);
   const raw = [...document.querySelectorAll("tr")]
-    .map((row) => parseAssessmentRow(row, location, course))
+    .map((row) => parseAssessmentRow(row, location, course, threshold))
     .filter(Boolean);
 
   const baseRows = new Map(raw.filter((item) => item.assessmentId).map((item) => [item.baseLabel, item]));
@@ -201,7 +201,7 @@ function extractAssignments(document, location = window.location) {
     });
 }
 
-function extractAssignmentDetail(document, location = window.location) {
+function extractAssignmentDetail(document, location = window.location, threshold = 95) {
   const parts = pathParts(location.href);
   if (!parts || parts.kind !== "assessment_instance") return null;
   const course = getCourseIdentity(document, location);
@@ -218,7 +218,7 @@ function extractAssignmentDetail(document, location = window.location) {
     sourceUrl: location.href,
     instanceId: parts.id,
     score,
-    completionStatus: completionFromScore(score),
+    completionStatus: completionFromScore(score, threshold),
     dueAtLocal: due.dueAtLocal,
     dueText: due.dueText,
     timezone: due.timezone,

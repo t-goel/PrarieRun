@@ -5,22 +5,26 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return false;
   }
   if (message?.type !== "PRAIRIERUN_READ_PAGE") return undefined;
-  try {
-    const adapter = window.PrairieLearnAdapter;
-    if (!adapter) throw new Error("PrairieLearn adapter is unavailable on this page.");
-    const currentType = adapter.pageType(location.href, document.title);
-    sendResponse({ ok: true, data: {
-      pageType: currentType,
-      url: location.href,
-      title: document.title,
-      courseLinks: currentType === "home" ? adapter.getCourseLinks(document, location) : [],
-      course: currentType === "course" ? adapter.getCourseIdentity(document, location) : null,
-      assignments: currentType === "course" ? adapter.extractAssignments(document, location) : [],
-      assignment: currentType === "assignment" ? adapter.extractAssignmentDetail(document, location) : null,
-    }});
-  } catch (error) {
-    sendResponse({ ok: false, error: error?.message || "Could not read this page." });
-  }
+  chrome.storage.local.get("prairierunSettings").then((stored) => {
+    try {
+      const adapter = window.PrairieLearnAdapter;
+      if (!adapter) throw new Error("PrairieLearn adapter is unavailable on this page.");
+      const threshold = Number(stored.prairierunSettings?.completionThreshold);
+      const completionThreshold = Number.isFinite(threshold) ? Math.max(0, Math.min(100, threshold)) : 95;
+      const currentType = adapter.pageType(location.href, document.title);
+      sendResponse({ ok: true, data: {
+        pageType: currentType,
+        url: location.href,
+        title: document.title,
+        courseLinks: currentType === "home" ? adapter.getCourseLinks(document, location) : [],
+        course: currentType === "course" ? adapter.getCourseIdentity(document, location) : null,
+        assignments: currentType === "course" ? adapter.extractAssignments(document, location, completionThreshold) : [],
+        assignment: currentType === "assignment" ? adapter.extractAssignmentDetail(document, location, completionThreshold) : null,
+      }});
+    } catch (error) {
+      sendResponse({ ok: false, error: error?.message || "Could not read this page." });
+    }
+  }).catch((error) => sendResponse({ ok: false, error: error?.message || "Could not read PrairieRun settings." }));
   return true;
 });
 

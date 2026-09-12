@@ -1,9 +1,10 @@
 const scanButton = document.querySelector("#scan");
 const contextElement = document.querySelector("#context");
 const notificationLeadElement = document.querySelector("#notification-lead-hours");
+const completionThresholdElement = document.querySelector("#completion-threshold");
 const timezoneElement = document.querySelector("#timezone");
 const resetDataButton = document.querySelector("#reset-data");
-let settings = { notificationLeadMinutes: 240 };
+let settings = { notificationLeadMinutes: 240, completionThreshold: 95 };
 
 function showStatus(text, error = false) {
   contextElement.textContent = text;
@@ -13,6 +14,7 @@ function applySettings(nextSettings = {}) {
   settings = { ...settings, ...nextSettings };
   const minutes = Number(settings.notificationLeadMinutes);
   notificationLeadElement.value = Number.isFinite(minutes) ? String(minutes / 60) : "4";
+  completionThresholdElement.value = Number.isFinite(Number(settings.completionThreshold)) ? String(settings.completionThreshold) : "95";
   timezoneElement.value = settings.timezone || "CST";
 }
 function saveSettings() {
@@ -47,7 +49,6 @@ function refreshState() {
     if (!response?.ok) return;
     applySettings(response.settings);
     if (response.sync?.state === "scanning") showStatus(`${response.sync.current || "Scanning…"} (${response.sync.found || 0} found)`);
-    if (response.sync?.state === "complete") showStatus(`Scan complete: ${response.sync.found || 0} assignments found.`);
     if (response.sync?.state === "error") showStatus(response.sync.current || "Scan failed.", true);
   }).catch((error) => showStatus(error.message, true));
 }
@@ -63,7 +64,7 @@ scanButton.addEventListener("click", () => {
     sendRuntimeMessage({ type: "PRAIRIERUN_START_SCAN", tabId: tab?.id }, 45000).then((response) => {
       scanButton.disabled = false;
       if (!response?.ok) showStatus(response?.error || "Scan failed.", true);
-      else showStatus(`Scan complete: ${response.count} assignments found.`);
+      else contextElement.textContent = "PrairieLearn detected.";
       refreshState();
     }).catch((error) => { scanButton.disabled = false; showStatus(error.message, true); });
   });
@@ -86,12 +87,23 @@ timezoneElement.addEventListener("change", async () => {
   await saveSettings();
 });
 
+completionThresholdElement.addEventListener("change", async () => {
+  const threshold = Number(completionThresholdElement.value);
+  if (!Number.isFinite(threshold) || threshold < 0 || threshold > 100) {
+    completionThresholdElement.value = String(settings.completionThreshold);
+    return;
+  }
+  settings.completionThreshold = Math.round(threshold);
+  await saveSettings();
+  scanButton.click();
+});
+
 resetDataButton.addEventListener("click", async () => {
   if (!confirm("Clear PrairieRun assignments, sync state, calendar mappings, settings, and cached authorization?")) return;
   resetDataButton.disabled = true;
   await chrome.storage.local.clear();
   await chrome.storage.session.clear();
   resetDataButton.disabled = false;
-  applySettings({ notificationLeadMinutes: 240, timezone: "CST" });
+  applySettings({ notificationLeadMinutes: 240, completionThreshold: 95, timezone: "CST" });
   showStatus("Test data cleared. Refresh PrairieLearn to scan again.");
 });

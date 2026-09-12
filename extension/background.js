@@ -166,7 +166,7 @@ async function startScan(sourceTabId) {
   debugLog("Source page classified", { sourceTabId, pageType: home.pageType, courseLinkCount: home.courseLinks?.length || 0, assignmentCount: home.assignments?.length || 0 });
   if (home.pageType === "course") {
     const result = await saveScanResult(home.assignments || []);
-    await setSyncStatus({ state: "complete", completed: 1, total: 1, found: result.merged.length, current: "Scan complete" });
+    await setSyncStatus({ state: "complete", completed: 1, total: 1, found: result.merged.length, current: "Ready" });
     return result;
   }
   if (home.pageType !== "home") throw new Error("Open the PrairieLearn home page or a class assessment page before scanning.");
@@ -183,7 +183,7 @@ async function startScan(sourceTabId) {
   }
   const result = await saveScanResult(allAssignments);
   debugLog("Scan results saved", { assignmentCount: result.merged.length, detectedCount: result.detectedIds.size });
-  await setSyncStatus({ state: "complete", completed: courseLinks.length, total: courseLinks.length, found: result.merged.length, current: "Scan complete" });
+  await setSyncStatus({ state: "complete", completed: courseLinks.length, total: courseLinks.length, found: result.merged.length, current: "Ready" });
   return result;
 }
 
