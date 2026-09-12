@@ -256,7 +256,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== "local" || !changes[SETTINGS_KEY] || !Object.prototype.hasOwnProperty.call(changes[SETTINGS_KEY].newValue || {}, "completionThreshold")) return;
+  const settingChange = changes[SETTINGS_KEY];
+  if (areaName !== "local" || !settingChange || settingChange.oldValue?.completionThreshold === settingChange.newValue?.completionThreshold) return;
   chrome.tabs.query({ url: "https://us.prairielearn.com/*" }).then((tabs) => {
     const homeTab = tabs.find((tab) => !/\/pl\/course_instance\/\d+/.test(tab.url || ""));
     if (homeTab?.id) return runScan(homeTab.id, false).catch((error) => debugLog("Could not refresh after completion threshold change", { error: error.message }));
