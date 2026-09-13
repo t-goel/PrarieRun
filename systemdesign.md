@@ -30,18 +30,19 @@ The manifest loads the content scripts on PrairieLearn and loads
 the calendar module is a live dependency even though it is not listed in the
 manifest's content-script array.
 
-## Cross-browser support (Chrome/Brave + Firefox 121+)
+## Cross-browser support (Chrome/Brave + Firefox 115+)
 
 One codebase, two generated manifests. `extension/manifest.base.json` is the
 shared source of truth and `build-manifest.js` (repo root) generates each
-target: `--target=chrome` regenerates `extension/manifest.json`, and
-`--target=firefox` emits a `dist-firefox/` directory whose manifest adds
-only `browser_specific_settings.gecko` (stable add-on ID plus
-`strict_min_version: "121.0"`). Both targets keep the single-file
-`service_worker` background; Firefox 121 implements MV3 service workers, so
-no `scripts`-array background is needed, and the `typeof importScripts ===
-"function"` guard at the top of `background.js` keeps the code correct if a
-scripts-array background is ever required.
+target: `--target=chrome` regenerates `extension/manifest.json` (single-file
+`service_worker` background), and `--target=firefox` emits a `dist-firefox/`
+directory whose manifest swaps in a `scripts`-array background (`compat.js`,
+`calendar.js`, `background.js` in order) and adds
+`browser_specific_settings.gecko` (stable add-on ID plus
+`strict_min_version: "115.0"`). The scripts array is required because
+Firefox only enables `service_worker` on 121+; the `typeof importScripts ===
+"function"` guard at the top of `background.js` loads the modules only when
+the manifest has not already done so.
 
 `extension/compat.js` is the only module that touches `browser.*` /
 `chrome.*` directly. It loads first in every context and exposes

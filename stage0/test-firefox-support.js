@@ -134,15 +134,20 @@ test("chrome manifest matches the base manifest", () => {
   assert.deepEqual(chrome, base);
 });
 
-test("firefox manifest adds only the gecko identity block", () => {
+test("firefox manifest swaps in a scripts-array background and the gecko identity block", () => {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "prairierun-firefox-"));
   try {
     execFileSync(process.execPath, [path.join(ROOT, "build-manifest.js"), "--target=firefox", `--out=${outDir}`], { stdio: "pipe" });
     const base = JSON.parse(fs.readFileSync(BASE_MANIFEST_PATH, "utf8"));
     const firefox = JSON.parse(fs.readFileSync(path.join(outDir, "manifest.json"), "utf8"));
-    const { browser_specific_settings, ...rest } = firefox;
-    assert.deepEqual(rest, base);
-    assert.equal(browser_specific_settings.gecko.strict_min_version, "121.0");
+    const { browser_specific_settings, background, ...rest } = firefox;
+    const { background: _baseBackground, ...baseRest } = base;
+    void _baseBackground;
+    assert.deepEqual(rest, baseRest);
+    // scripts array (not service_worker: Firefox only enables that on 121+)
+    // with the shim and calendar module ahead of the scanner.
+    assert.deepEqual(background, { scripts: ["compat.js", "calendar.js", "background.js"] });
+    assert.equal(browser_specific_settings.gecko.strict_min_version, "115.0");
     assert.match(browser_specific_settings.gecko.id, /@/);
     for (const file of ["compat.js", "calendar.js", "background.js", "content.js", "home-panel.js", "popup.js"]) {
       assert.ok(fs.existsSync(path.join(outDir, file)), `dist ships ${file}`);

@@ -31,15 +31,18 @@ calendar.js -> Google Calendar API
 `extension/background.js` imports `extension/calendar.js`; `calendar.js` is a
 live dependency even though it is not loaded as a content script.
 
-## Cross-Browser Support (Chrome/Brave + Firefox 121+)
+## Cross-Browser Support (Chrome/Brave + Firefox 115+)
 
 - One codebase, two generated manifests. `extension/manifest.base.json` is
   the shared source of truth; `node build-manifest.js --target=chrome`
   regenerates `extension/manifest.json`, and
   `node build-manifest.js --target=firefox [--out=dist-firefox]
-  [--gecko-id=...]` emits the Firefox distribution (adds only
-  `browser_specific_settings.gecko`). Both targets keep the single-file
-  `service_worker` background because the minimum Firefox is 121.
+  [--gecko-id=...]` emits the Firefox distribution (scripts-array
+  background plus `browser_specific_settings.gecko`). Chrome keeps the
+  single-file `service_worker` background; Firefox uses `scripts`
+  (`service_worker` is only enabled on Firefox 121+, and 115 ESR must work).
+  Minimum Firefox is 115 (`storage.session` floor; the shim falls back to
+  memory without it).
 - `extension/compat.js` loads first in every context (service worker via a
   guarded `importScripts`, content scripts via manifest order, popup via
   script-tag order) and exposes `PrairieRunExt`. All runtime code must use
