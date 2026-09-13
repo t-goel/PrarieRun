@@ -40,6 +40,12 @@ function readBase() {
   return JSON.parse(fs.readFileSync(BASE_PATH, "utf8"));
 }
 
+// Windows checkouts with core.autocrlf store CRLF on disk; normalize so
+// --check passes regardless of the developer's line-ending setting.
+function readNormalized(filePath) {
+  return fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n");
+}
+
 function serialize(manifest) {
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
@@ -78,7 +84,7 @@ function main() {
   if (args.target === "chrome") {
     const text = serialize(buildChromeManifest());
     if (args.check) {
-      const current = fs.readFileSync(CHROME_MANIFEST_PATH, "utf8");
+      const current = readNormalized(CHROME_MANIFEST_PATH);
       if (current !== text) {
         console.error("extension/manifest.json is stale. Run: node build-manifest.js --target=chrome");
         process.exitCode = 1;
@@ -95,7 +101,7 @@ function main() {
   if (args.check) {
     const manifestPath = path.join(outDir, "manifest.json");
     const expected = serialize(buildFirefoxManifest(args.geckoId));
-    if (!fs.existsSync(manifestPath) || fs.readFileSync(manifestPath, "utf8") !== expected) {
+    if (!fs.existsSync(manifestPath) || readNormalized(manifestPath) !== expected) {
       console.error(`${path.relative(ROOT, manifestPath)} is stale. Run: node build-manifest.js --target=firefox`);
       process.exitCode = 1;
       return;
