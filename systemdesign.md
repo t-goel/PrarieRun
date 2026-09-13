@@ -30,6 +30,29 @@ The manifest loads the content scripts on PrairieLearn and loads
 the calendar module is a live dependency even though it is not listed in the
 manifest's content-script array.
 
+## Cross-browser support (Chrome/Brave + Firefox 121+)
+
+One codebase, two generated manifests. `extension/manifest.base.json` is the
+shared source of truth and `build-manifest.js` (repo root) generates each
+target: `--target=chrome` regenerates `extension/manifest.json`, and
+`--target=firefox` emits a `dist-firefox/` directory whose manifest adds
+only `browser_specific_settings.gecko` (stable add-on ID plus
+`strict_min_version: "121.0"`). Both targets keep the single-file
+`service_worker` background; Firefox 121 implements MV3 service workers, so
+no `scripts`-array background is needed, and the `typeof importScripts ===
+"function"` guard at the top of `background.js` keeps the code correct if a
+scripts-array background is ever required.
+
+`extension/compat.js` is the only module that touches `browser.*` /
+`chrome.*` directly. It loads first in every context and exposes
+`PrairieRunExt`: promise-based storage/tabs/runtime/identity helpers plus a
+session-token store that prefers `storage.session` and falls back to
+in-memory for the browser session, never persisting tokens to
+`storage.local`. The Firefox Google OAuth client is separate from the Chrome
+client (different redirect origin); `calendar.js` keeps the Chrome client ID
+as default and honors a `googleClientId` settings override for Firefox.
+`dist-firefox/` is gitignored build output.
+
 ## Findings
 
 | Item | Evidence | Assessment | Proposed action |
