@@ -13,7 +13,10 @@ const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar";
 const REVOCATION_URL = "https://oauth2.googleapis.com/revoke";
 
-function getClientId() {
+async function getClientId() {
+  const stored = await PrairieRunExt.storageLocalGet("prairierunSettings");
+  const override = stored.prairierunSettings?.googleClientId;
+  if (override) return override;
   const clientId = globalThis.PrairieRunOAuthConfig?.clientId;
   if (!clientId || /REPLACE/i.test(clientId)) {
     throw new Error("The Google OAuth client ID is not configured. See extension/google-calendar-setup.md and set extension/oauth-config.js.");
@@ -22,7 +25,7 @@ function getClientId() {
 }
 
 function getRedirectUri() {
-  return chrome.identity.getRedirectURL("oauth2");
+  return PrairieRunExt.identityGetRedirectURL("oauth2");
 }
 
 function authUtils() { return globalThis.PrairieRunAuthUtils || null; }
@@ -50,7 +53,7 @@ function toActionableAuthError(error, redirectUri) {
 }
 
 async function clearCachedToken() {
-  try { await chrome.storage.session.remove(CALENDAR_TOKEN_KEY); } catch (_error) { /* clearing is best-effort */ }
+  try { await PrairieRunExt.clearSessionValues(); } catch (_error) { /* clearing is best-effort */ }
 }
 
 async function revokeToken(token) {
@@ -73,12 +76,10 @@ function parseAuthResult(responseUrl) {
 async function getCalendarToken(options = {}) {
   const { forceInteractive = false } = options;
   if (!forceInteractive) {
-    const cached = await chrome.storage.session.get(CALENDAR_TOKEN_KEY);
-    if (cached[CALENDAR_TOKEN_KEY]?.accessToken && cached[CALENDAR_TOKEN_KEY].expiresAt > Date.now() + 60_000) {
-      return cached[CALENDAR_TOKEN_KEY].accessToken;
-    }
+    const cached = await PrairieRunExt.getSessionValue(CALENDAR_TOKEN_KEY);
+    if (cached?.accessToken && cached.expiresAt > Date.now() + 60_000) return cached.accessToken;
   }
-  const clientId = getClientId();
+  const clientId = await getClientId();
   const redirectUri = getRedirectUri();
   const params = new URLSearchParams({
     client_id: clientId,
@@ -91,16 +92,16 @@ async function getCalendarToken(options = {}) {
   let responseUrl;
   if (forceInteractive) {
     try {
-      responseUrl = await chrome.identity.launchWebAuthFlow({ url, interactive: true });
+      responseUrl = await PrairieRunExt.identityLaunchWebAuthFlow({ url, interactive: true });
     } catch (error) {
       throw toActionableAuthError(error, redirectUri);
     }
   } else {
     try {
-      responseUrl = await chrome.identity.launchWebAuthFlow({ url, interactive: false });
+      responseUrl = await PrairieRunExt.identityLaunchWebAuthFlow({ url, interactive: false });
     } catch (_silentError) {
       try {
-        responseUrl = await chrome.identity.launchWebAuthFlow({ url, interactive: true });
+        responseUrl = await PrairieRunExt.identityLaunchWebAuthFlow({ url, interactive: true });
       } catch (error) {
         throw toActionableAuthError(error, redirectUri);
       }
@@ -115,15 +116,14 @@ async function getCalendarToken(options = {}) {
   const token = result.get("access_token");
   if (!token) throw new Error("Google did not return an access token.");
   const expiresIn = Number(result.get("expires_in")) || 3600;
-  await chrome.storage.session.set({ [CALENDAR_TOKEN_KEY]: { accessToken: token, expiresAt: Date.now() + expiresIn * 1000 } });
+  await PrairieRunExt.setSessionValue(CALENDAR_TOKEN_KEY, { accessToken: token, expiresAt: Date.now() + expiresIn * 1000 });
   return token;
 }
 
 async function getAuthStatus() {
   let clientConfigured = true;
-  try { getClientId(); } catch (_error) { clientConfigured = false; }
-  const stored = await chrome.storage.session.get(CALENDAR_TOKEN_KEY);
-  const entry = stored[CALENDAR_TOKEN_KEY];
+  try { await getClientId(); } catch (_error) { clientConfigured = false; }
+  const entry = await PrairieRunExt.getSessionValue(CALENDAR_TOKEN_KEY);
   const connected = Boolean(entry?.accessToken && entry.expiresAt > Date.now() + 60_000);
   return {
     connected,
@@ -139,8 +139,8 @@ async function connectGoogleCalendar() {
 }
 
 async function disconnectGoogleCalendar() {
-  const stored = await chrome.storage.session.get(CALENDAR_TOKEN_KEY);
-  await revokeToken(stored[CALENDAR_TOKEN_KEY]?.accessToken);
+  const entry = await PrairieRunExt.getSessionValue(CALENDAR_TOKEN_KEY);
+  await revokeToken(entry?.accessToken);
   await clearCachedToken();
   return getAuthStatus();
 }
@@ -234,7 +234,7 @@ function colorDistanceToGrey(color) {
 }
 
 async function getColorPlan(token, courseKeys) {
-  const stored = await chrome.storage.local.get(CALENDAR_COLOR_KEY);
+  const stored = await PrairieRunExt.storageLocalGet(CALENDAR_COLOR_KEY);
   const saved = stored[CALENDAR_COLOR_KEY] || {};
   const colors = await calendarRequest("/colors", {}, token);
   const eventColors = colors.event || {};
@@ -243,7 +243,7 @@ async function getColorPlan(token, courseKeys) {
   const classColorIds = colorIds.filter((id) => id !== greyColorId);
   const classColors = { ...saved.classColors };
   courseKeys.forEach((key, index) => { if (!classColors[key] && classColorIds.length) classColors[key] = classColorIds[index % classColorIds.length]; });
-  await chrome.storage.local.set({ [CALENDAR_COLOR_KEY]: { classColors, greyColorId } });
+  await PrairieRunExt.storageLocalSet({ [CALENDAR_COLOR_KEY]: { classColors, greyColorId } });
   return { classColors, greyColorId };
 }
 
@@ -257,7 +257,7 @@ async function findMarkedEvent(assignment, calendarId, token) {
 
 async function runExport(assignments, token) {
   const calendars = await listWritableCalendars(token);
-  const stored = await chrome.storage.local.get([CALENDAR_MAPPINGS_KEY, CALENDAR_SYNC_KEY, "prairierunSettings"]);
+  const stored = await PrairieRunExt.storageLocalGet([CALENDAR_MAPPINGS_KEY, CALENDAR_SYNC_KEY, "prairierunSettings"]);
   const mappings = stored[CALENDAR_MAPPINGS_KEY] || {};
   const sync = stored[CALENDAR_SYNC_KEY] || {};
   const reminderMinutes = Math.max(0, Math.min(10080, Number(stored.prairierunSettings?.notificationLeadMinutes) || 240));
@@ -290,7 +290,7 @@ async function runExport(assignments, token) {
       results.push({ assignment, status: "failed", reason: error?.message || "Unknown Calendar API error" });
     }
   }
-  await chrome.storage.local.set({ [CALENDAR_MAPPINGS_KEY]: mappings, [CALENDAR_SYNC_KEY]: sync });
+  await PrairieRunExt.storageLocalSet({ [CALENDAR_MAPPINGS_KEY]: mappings, [CALENDAR_SYNC_KEY]: sync });
   return results;
 }
 
@@ -323,14 +323,14 @@ async function exportAssignments(assignments) {
 }
 
 async function removeOnce(assignment, token) {
-  const stored = await chrome.storage.local.get([CALENDAR_MAPPINGS_KEY, CALENDAR_SYNC_KEY]);
+  const stored = await PrairieRunExt.storageLocalGet([CALENDAR_MAPPINGS_KEY, CALENDAR_SYNC_KEY]);
   const sync = stored[CALENDAR_SYNC_KEY] || {};
   const mapping = sync[assignment.id];
   if (!mapping?.calendarId) return { status: "skipped", assignment };
   const event = await findMarkedEvent(assignment, mapping.calendarId, token);
   if (event?.id) await calendarRequest(`/calendars/${encodeURIComponent(mapping.calendarId)}/events/${encodeURIComponent(event.id)}`, { method: "DELETE" }, token);
   delete sync[assignment.id];
-  await chrome.storage.local.set({ [CALENDAR_SYNC_KEY]: sync });
+  await PrairieRunExt.storageLocalSet({ [CALENDAR_SYNC_KEY]: sync });
   return { status: event?.id ? "removed" : "skipped", assignment, eventId: event?.id };
 }
 

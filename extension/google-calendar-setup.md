@@ -51,3 +51,37 @@ In Brave, allow cookies for `accounts.google.com` and `googleapis.com` if sign-i
 ## Scope justification (for verification)
 
 PrairieRun keeps the full `calendar` scope because it creates one calendar per class (`POST /calendars`), lists writable calendars, reads event colors, and inserts/updates/deletes events with duplicate-prevention markers. Narrowing to `calendar.events` later would mean giving up per-class calendars (sync to one user-picked calendar instead) and re-testing creation, lookup, colors, and dedup.
+## Firefox OAuth setup
+
+Firefox cannot reuse the Chrome-extension-type OAuth client: its redirect
+origin is `https://<add-on-id>.extensions.allizom.org/...` (or the signed
+AMO variant), not `https://<id>.chromiumapp.org/oauth2`, and Google will
+reject the mismatched redirect. Firefox needs a **separate** OAuth client.
+
+1. Build and temporary-load the Firefox distribution:
+   `node build-manifest.js --target=firefox`, then `about:debugging → This
+   Firefox → Load Temporary Add-on` with any file in `dist-firefox/`.
+   The pinned `gecko.id` in the generated manifest keeps the add-on ID (and
+   therefore the redirect URI) stable across temporary installs.
+2. Spike: in the Firefox extension console, log the exact redirect URI:
+   `browser.identity.getRedirectURL("oauth2")`. This one value decides the
+   registration below; also confirm `browser.storage.session` exists on your
+   target Firefox version (115+ desktop expected).
+3. In the same Google Cloud project, create a separate OAuth client for
+   Firefox. If Google accepts the `extensions.allizom.org` redirect from
+   step 2, register it as a Web-application-type client with that exact
+   redirect URI; otherwise use the documented loopback form
+   (`http://127.0.0.1/mozoauth2/...`, Firefox 86+). Do not reuse the
+   Chrome-extension-type client.
+4. Point the Firefox build at the new client in its build-time
+   `extension/oauth-config.js` before generating `dist-firefox/`. Keep the
+   Chrome and Firefox client IDs in separate local build configurations; do
+   not expose either client ID to end users.
+5. Verify in Firefox: consent popup on first sync, no re-prompt on every
+   export (token cache hit), re-prompt after expiry, per-class calendar
+   creation, grey-completed vs. class-color events, and duplicate-safe
+   updates via the `extendedProperties` marker.
+
+Token hygiene is the same in both browsers: access tokens live in
+`storage.session` with an in-memory fallback for the browser session and are
+never written to `storage.local`.

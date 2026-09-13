@@ -74,7 +74,7 @@
     panel.querySelectorAll("button[data-edit-id]").forEach((button) => button.addEventListener("click", () => editDueDate(button.dataset.editId)));
   }
 
-  async function persist() { await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments }); render(); }
+  async function persist() { await PrairieRunExt.storageLocalSet({ [ASSIGNMENTS_KEY]: assignments }); render(); }
 
   function renderAuthStatus() {
     if (!panel) return;
@@ -90,7 +90,7 @@
   }
 
   function refreshAuthStatus() {
-    chrome.runtime.sendMessage({ type: "PRAIRIERUN_AUTH_STATUS" }).then((response) => {
+    PrairieRunExt.runtimeSendMessage({ type: "PRAIRIERUN_AUTH_STATUS" }).then((response) => {
       if (response?.ok) authStatus = response.status;
       renderAuthStatus();
     }).catch(() => undefined);
@@ -112,7 +112,7 @@
         item.manuallyEnteredDueAt = `${date} ${time}`; item.dueAtLocal = item.manuallyEnteredDueAt; item.syncState = item.syncState === "new" ? "new" : "changed";
       } else if (dialog.returnValue === "remove") { item.manuallyEnteredDueAt = null; item.dueAtLocal = null; }
       dialog.remove();
-      if (dialog.returnValue === "save" || dialog.returnValue === "remove") { await persist(); chrome.runtime.sendMessage({ type: "PRAIRIERUN_ASSIGNMENT_UPDATED", assignment: item }).catch(() => undefined); }
+      if (dialog.returnValue === "save" || dialog.returnValue === "remove") { await persist(); PrairieRunExt.runtimeSendMessage({ type: "PRAIRIERUN_ASSIGNMENT_UPDATED", assignment: item }).catch(() => undefined); }
     });
     dialog.showModal();
   }
@@ -129,12 +129,12 @@
       </div>
     </div>
     <ul class="list-group list-group-flush prr-list"></ul><div class="prr-auth"><span class="prr-auth-status text-muted">Calendar: checking…</span><span class="prr-auth-actions"><button type="button" class="btn btn-sm btn-outline-secondary" id="prr-auth-connect">Connect</button><button type="button" class="btn btn-sm btn-outline-secondary" id="prr-auth-disconnect" hidden>Disconnect</button></span></div><div class="prr-auth-error text-muted" hidden></div>`;
-    built.querySelector("#prr-view-toggle").addEventListener("click", async () => { settings.assignmentView = settings.assignmentView === "ordered" ? "class" : "ordered"; await chrome.storage.local.set({ [SETTINGS_KEY]: settings }); render(); });
-    built.querySelector("#prr-show-undated").addEventListener("click", async () => { settings.showUndatedAssignments = !settings.showUndatedAssignments; await chrome.storage.local.set({ [SETTINGS_KEY]: settings }); render(); });
+    built.querySelector("#prr-view-toggle").addEventListener("click", async () => { settings.assignmentView = settings.assignmentView === "ordered" ? "class" : "ordered"; await PrairieRunExt.storageLocalSet({ [SETTINGS_KEY]: settings }); render(); });
+    built.querySelector("#prr-show-undated").addEventListener("click", async () => { settings.showUndatedAssignments = !settings.showUndatedAssignments; await PrairieRunExt.storageLocalSet({ [SETTINGS_KEY]: settings }); render(); });
     built.querySelector("#prr-auth-connect").addEventListener("click", async () => {
       const errorEl = built.querySelector(".prr-auth-error");
       try {
-        const response = await chrome.runtime.sendMessage({ type: "PRAIRIERUN_AUTH_CONNECT" });
+        const response = await PrairieRunExt.runtimeSendMessage({ type: "PRAIRIERUN_AUTH_CONNECT" });
         if (!response?.ok) throw new Error(response?.error || "Google sign-in failed.");
         authStatus = response.status;
         if (errorEl) { errorEl.hidden = true; errorEl.dataset.pinned = ""; }
@@ -145,7 +145,7 @@
     });
     built.querySelector("#prr-auth-disconnect").addEventListener("click", async () => {
       try {
-        const response = await chrome.runtime.sendMessage({ type: "PRAIRIERUN_AUTH_DISCONNECT" });
+        const response = await PrairieRunExt.runtimeSendMessage({ type: "PRAIRIERUN_AUTH_DISCONNECT" });
         if (response?.ok) authStatus = response.status;
       } catch (_error) { /* status refresh below shows the truth */ }
       renderAuthStatus();
@@ -170,7 +170,7 @@
 
   function mount() {
     if (document.getElementById(PANEL_ID)) return;
-    chrome.storage.local.get([ASSIGNMENTS_KEY, SETTINGS_KEY]).then((stored) => {
+    PrairieRunExt.storageLocalGet([ASSIGNMENTS_KEY, SETTINGS_KEY]).then((stored) => {
       assignments = stored[ASSIGNMENTS_KEY] || [];
       settings = { ...settings, ...(stored[SETTINGS_KEY] || {}) };
       if (placePanel()) return;
@@ -182,7 +182,7 @@
 
   function update(nextAssignments) { assignments = nextAssignments || assignments; if (panel) { render(); refreshAuthStatus(); } }
 
-  chrome.storage.onChanged.addListener((changes, areaName) => {
+  PrairieRunExt.addStorageChangedListener((changes, areaName) => {
     if (areaName !== "local") return;
     if (changes[ASSIGNMENTS_KEY]) assignments = changes[ASSIGNMENTS_KEY].newValue || assignments;
     if (changes[SETTINGS_KEY]) settings = { ...settings, ...(changes[SETTINGS_KEY].newValue || {}) };

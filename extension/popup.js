@@ -24,30 +24,13 @@ function applySettings(nextSettings = {}) {
 }
 function saveSettings() {
   delete settings.timezone;
-  return chrome.storage.local.set({ prairierunSettings: settings });
+  return PrairieRunExt.storageLocalSet({ prairierunSettings: settings });
 }
 function sendRuntimeMessage(message, timeoutMs = 10000) {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const timeout = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      reject(new Error("PrairieRun background scanner did not respond. Reload the extension and try again."));
-    }, timeoutMs);
-    try {
-      chrome.runtime.sendMessage(message, (response) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeout);
-        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-        else resolve(response);
-      });
-    } catch (error) {
-      settled = true;
-      clearTimeout(timeout);
-      reject(error);
-    }
-  });
+  return Promise.race([
+    PrairieRunExt.runtimeSendMessage(message),
+    new Promise((_, reject) => setTimeout(() => reject(new Error("PrairieRun background scanner did not respond. Reload the extension and try again.")), timeoutMs)),
+  ]);
 }
 function refreshAuthStatus() {
   if (!authStatusElement) return;
@@ -102,22 +85,20 @@ function monitorRefresh(attempt = 0) {
   if (attempt < 120) setTimeout(() => monitorRefresh(attempt + 1), 500);
 }
 
-chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+PrairieRunExt.tabsQuery({ active: true, currentWindow: true }).then(([tab]) => {
   contextElement.textContent = tab?.url?.startsWith("https://us.prairielearn.com/") ? "PrairieLearn detected." : "Open us.prairielearn.com to scan assignments.";
-});
+}).catch(() => undefined);
 
 scanButton.addEventListener("click", () => {
   console.log("[PrairieRun] Popup scan button clicked");
   scanButton.disabled = true; showStatus("Starting scan…");
-  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-    sendRuntimeMessage({ type: "PRAIRIERUN_START_SCAN", tabId: tab?.id }, 45000).then((response) => {
+  PrairieRunExt.tabsQuery({ active: true, currentWindow: true }).then(([tab]) => sendRuntimeMessage({ type: "PRAIRIERUN_START_SCAN", tabId: tab?.id }, 45000)).then((response) => {
       scanButton.disabled = false;
       if (!response?.ok) showStatus(response?.error || "Scan failed.", true);
       else contextElement.textContent = "PrairieLearn detected.";
       refreshState();
       refreshAuthStatus();
     }).catch((error) => { scanButton.disabled = false; showStatus(error.message, true); });
-  });
 });
 
 refreshState();
@@ -193,8 +174,8 @@ completionThresholdElement.addEventListener("change", async () => {
 resetDataButton.addEventListener("click", async () => {
   if (!confirm("Clear PrairieRun assignments, sync state, calendar mappings, settings, and cached authorization?")) return;
   resetDataButton.disabled = true;
-  await chrome.storage.local.clear();
-  await chrome.storage.session.clear();
+  await PrairieRunExt.storageLocalClear();
+  await PrairieRunExt.clearSessionValues();
   resetDataButton.disabled = false;
   applySettings({ notificationLeadMinutes: 240, completionThreshold: 95 });
   showStatus("Test data cleared. Refresh PrairieLearn to scan again.");
