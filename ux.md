@@ -33,6 +33,9 @@ removed.
 - Existing synced assignments remain collapsed according to the current panel
   rules; new or changed assignments remain visible when the product needs the
   user to review them.
+- The home-panel Due Date / By Class switch uses compact button-like corners.
+  Its active tab moves underneath labels that use blending, so the label
+  appearance does not jump independently of the slide animation.
 - Calendar links, class-specific calendars, completion state, duplicate
   prevention, and the strict-greater-than-95% (not equal to 95%) completion rule
   must not regress.

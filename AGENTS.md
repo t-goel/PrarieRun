@@ -97,6 +97,9 @@ live dependency even though it is not loaded as a content script.
 - Keep PrairieLearn assignment source links working.
 - Preserve compact, scan-friendly UI. Avoid bringing back clutter removed in the
   cleanup pass.
+- Keep the home-panel view switch compact: use button-like corner rounding and
+  let its labels use blend mode over the moving active tab instead of
+  synchronizing text colors during the animation.
 
 ## Files To Treat Carefully
 
