@@ -1,4 +1,8 @@
-if (!globalThis.PrairieRunCalendar) importScripts("calendar.js");
+// In Chrome's service-worker background, pull in the compat shim and the
+// calendar module. In Firefox's scripts-array background page (or any context
+// where the manifest already loaded them in order) `importScripts` is either
+// undefined or the modules already exist, so this is a no-op there.
+if (typeof importScripts === "function" && !globalThis.PrairieRunCalendar) importScripts("compat.js", "calendar.js");
 
 const ASSIGNMENTS_KEY = "prairierunAssignments";
 const SYNC_KEY = "prairierunSyncStatus";
@@ -17,7 +21,7 @@ function debugLog(message, details) {
   if (debugEntries.length > 100) debugEntries.shift();
   console.log(`[PrairieRun] ${message}`, details ?? "");
   try {
-    const pending = chrome.storage.local.set({ [DEBUG_LOG_KEY]: debugEntries });
+    const pending = PrairieRunExt.storageLocalSet({ [DEBUG_LOG_KEY]: debugEntries });
     pending?.catch?.(() => undefined);
   } catch (_error) {
     // Logging must never interrupt scanning.
@@ -39,7 +43,7 @@ function isCurrentAssignment(assignment) {
 }
 
 async function getSettings() {
-  const stored = await chrome.storage.local.get(SETTINGS_KEY);
+  const stored = await PrairieRunExt.storageLocalGet(SETTINGS_KEY);
   return { ...defaultSettings, ...(stored[SETTINGS_KEY] || {}) };
 }
 
@@ -64,7 +68,7 @@ function normalizeStoredAssignment(assignment, existing, now, syncedCompletion) 
 }
 
 async function saveScanResult(assignments) {
-  const stored = await chrome.storage.local.get([ASSIGNMENTS_KEY, BACKGROUND_CALENDAR_SYNC_KEY]);
+  const stored = await PrairieRunExt.storageLocalGet([ASSIGNMENTS_KEY, BACKGROUND_CALENDAR_SYNC_KEY]);
   const previous = new Map((stored[ASSIGNMENTS_KEY] || []).map((item) => [item.id, item]));
   const calendarSync = stored[BACKGROUND_CALENDAR_SYNC_KEY] || {};
   const now = new Date().toISOString();
@@ -79,11 +83,11 @@ async function saveScanResult(assignments) {
   });
   const scannedIds = new Set(merged.map((item) => item.id));
   const stale = (stored[ASSIGNMENTS_KEY] || []).filter((item) => !scannedIds.has(item.id)).map((item) => ({ ...item, syncState: "stale" }));
-  await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: [...merged, ...stale] });
+  await PrairieRunExt.storageLocalSet({ [ASSIGNMENTS_KEY]: [...merged, ...stale] });
   return { merged, detectedIds };
 }
 
-async function setSyncStatus(status) { await chrome.storage.local.set({ [SYNC_KEY]: status }); }
+async function setSyncStatus(status) { await PrairieRunExt.storageLocalSet({ [SYNC_KEY]: status }); }
 
 function waitForTabComplete(tabId) {
   debugLog("Waiting for tab to finish loading", { tabId });
@@ -93,7 +97,7 @@ function waitForTabComplete(tabId) {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
-      chrome.tabs.onUpdated.removeListener(listener);
+      PrairieRunExt.removeTabsUpdatedListener(listener);
       if (error) { debugLog("Tab load failed", { tabId, error: error.message }); reject(error); }
       else { debugLog("Tab finished loading", { tabId }); resolve(); }
     };
@@ -102,31 +106,27 @@ function waitForTabComplete(tabId) {
       if (updatedTabId !== tabId || changeInfo.status !== "complete") return;
       finish();
     };
-    chrome.tabs.onUpdated.addListener(listener);
-    chrome.tabs.get(tabId, (tab) => {
-      if (chrome.runtime.lastError) { finish(new Error(chrome.runtime.lastError.message)); return; }
-      if (tab?.status === "complete") { finish(); return; }
-    });
+    PrairieRunExt.addTabsUpdatedListener(listener);
+    PrairieRunExt.tabsGet(tabId).then((tab) => {
+      if (tab?.status === "complete") finish();
+    }).catch((error) => finish(error instanceof Error ? error : new Error(String(error?.message || error))));
   });
 }
 
 function readPage(tabId) {
   debugLog("Requesting page data", { tabId });
-  return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, { type: "PRAIRIERUN_READ_PAGE" }, (response) => {
-      if (chrome.runtime.lastError) {
-        const error = new Error(chrome.runtime.lastError.message);
-        debugLog("Page data request failed", { tabId, error: error.message });
-        reject(error);
-      } else if (!response?.ok) {
-        const error = new Error(response?.error || "Could not read the PrairieLearn page.");
-        debugLog("Page returned an error", { tabId, error: error.message });
-        reject(error);
-      } else {
-        debugLog("Page data received", { tabId, pageType: response.data?.pageType, assignmentCount: response.data?.assignments?.length || 0 });
-        resolve(response.data);
-      }
-    });
+  return PrairieRunExt.tabsSendMessage(tabId, { type: "PRAIRIERUN_READ_PAGE" }).then((response) => {
+    if (!response?.ok) {
+      const error = new Error(response?.error || "Could not read the PrairieLearn page.");
+      debugLog("Page returned an error", { tabId, error: error.message });
+      throw error;
+    }
+    debugLog("Page data received", { tabId, pageType: response.data?.pageType, assignmentCount: response.data?.assignments?.length || 0 });
+    return response.data;
+  }).catch((error) => {
+    const wrapped = error instanceof Error ? error : new Error(String(error?.message || error));
+    debugLog("Page data request failed", { tabId, error: wrapped.message });
+    throw wrapped;
   });
 }
 
@@ -146,7 +146,7 @@ async function readPageWhenReady(tabId) {
 
 async function scanCourse(url, progress, index, total) {
   debugLog("Opening course tab", { url, index: index + 1, total });
-  const tab = await chrome.tabs.create({ url, active: false });
+  const tab = await PrairieRunExt.tabsCreate({ url, active: false });
   debugLog("Course tab created", { tabId: tab.id, url });
   try {
     await waitForTabComplete(tab.id);
@@ -158,7 +158,7 @@ async function scanCourse(url, progress, index, total) {
     debugLog("Course assignments extracted", { tabId: tab.id, count: data.assignments?.length || 0 });
     await setSyncStatus({ state: "scanning", current: `Scanning ${data.course?.courseName || url}`, completed: index, total, found: progress.found });
     return data.assignments || [];
-  } finally { await chrome.tabs.remove(tab.id).catch(() => undefined); }
+  } finally { await PrairieRunExt.tabsRemove(tab.id).catch(() => undefined); }
 }
 
 async function startScan(sourceTabId) {
@@ -199,7 +199,7 @@ function applyExportResults(results, assignments) {
 }
 
 async function sendHomeUpdate(tabId, assignments, exportResults = []) {
-  chrome.tabs.sendMessage(tabId, { type: "PRAIRIERUN_HOME_SCAN_RESULT", assignments, exportResults }).catch((error) => debugLog("Could not update PrairieLearn page", { tabId, error: error.message }));
+  PrairieRunExt.tabsSendMessage(tabId, { type: "PRAIRIERUN_HOME_SCAN_RESULT", assignments, exportResults }).catch((error) => debugLog("Could not update PrairieLearn page", { tabId, error: error.message }));
 }
 
 async function notifyHomeTab(tabId, assignments, detectedIds) {
@@ -210,7 +210,7 @@ async function notifyHomeTab(tabId, assignments, detectedIds) {
     try {
       const exportResults = await PrairieRunCalendar.exportAssignments(eligible);
       applyExportResults(exportResults, assignments);
-      await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments });
+      await PrairieRunExt.storageLocalSet({ [ASSIGNMENTS_KEY]: assignments });
       await sendHomeUpdate(tabId, assignments, exportResults);
     } catch (error) {
       debugLog("Automatic Calendar synchronization failed", { error: error.message });
@@ -250,7 +250,7 @@ async function runScan(sourceTabId) {
   }
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+PrairieRunExt.addRuntimeMessageListener((message, sender, sendResponse) => {
   if (message?.type === "PRAIRIERUN_START_SCAN") {
     debugLog("Popup requested scan", { tabId: message.tabId || sender.tab?.id });
     runScan(message.tabId || sender.tab?.id).then((result) => sendResponse({ ok: true, count: result.assignments.length })).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); sendResponse({ ok: false, error: error.message }); });
@@ -272,27 +272,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
     }
     PrairieRunCalendar.exportAssignments([assignment]).then(async (results) => {
-      const stored = await chrome.storage.local.get(ASSIGNMENTS_KEY);
+      const stored = await PrairieRunExt.storageLocalGet(ASSIGNMENTS_KEY);
       const current = stored[ASSIGNMENTS_KEY] || [];
       applyExportResults(results, current);
-      await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: current });
+      await PrairieRunExt.storageLocalSet({ [ASSIGNMENTS_KEY]: current });
       sendResponse({ ok: true, results, assignments: current });
     }).catch((error) => sendResponse({ ok: false, error: error?.message || "Automatic calendar synchronization failed." }));
     return true;
   }
   if (message?.type === "PRAIRIERUN_GET_STATE") {
-    chrome.storage.local.get([ASSIGNMENTS_KEY, SYNC_KEY, SETTINGS_KEY]).then((stored) => sendResponse({ ok: true, assignments: stored[ASSIGNMENTS_KEY] || [], sync: stored[SYNC_KEY] || { state: "idle" }, settings: { ...defaultSettings, ...(stored[SETTINGS_KEY] || {}) } }));
+    PrairieRunExt.storageLocalGet([ASSIGNMENTS_KEY, SYNC_KEY, SETTINGS_KEY]).then((stored) => sendResponse({ ok: true, assignments: stored[ASSIGNMENTS_KEY] || [], sync: stored[SYNC_KEY] || { state: "idle" }, settings: { ...defaultSettings, ...(stored[SETTINGS_KEY] || {}) } }));
     return true;
   }
 });
 
 async function findPrairieLearnHomeTab() {
-  const tabs = await chrome.tabs.query({ url: "https://us.prairielearn.com/*" });
+  const tabs = await PrairieRunExt.tabsQuery({ url: "https://us.prairielearn.com/*" });
   return tabs.find((tab) => !/\/pl\/course_instance\/\d+/.test(tab.url || "")) || null;
 }
 
 async function resyncStoredAssignments() {
-  const stored = await chrome.storage.local.get(ASSIGNMENTS_KEY);
+  const stored = await PrairieRunExt.storageLocalGet(ASSIGNMENTS_KEY);
   const assignments = (stored[ASSIGNMENTS_KEY] || []).filter((item) => item.dueAtLocal && item.syncState !== "stale");
   if (!assignments.length) return;
   debugLog("Resynchronizing Calendar assignments after reminder setting change", { count: assignments.length });
@@ -300,12 +300,12 @@ async function resyncStoredAssignments() {
   applyExportResults(results, assignments);
   const current = stored[ASSIGNMENTS_KEY] || [];
   applyExportResults(results, current);
-  await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: current });
-  const tabs = await chrome.tabs.query({ url: "https://us.prairielearn.com/*" });
+  await PrairieRunExt.storageLocalSet({ [ASSIGNMENTS_KEY]: current });
+  const tabs = await PrairieRunExt.tabsQuery({ url: "https://us.prairielearn.com/*" });
   await Promise.all(tabs.filter((tab) => tab.id).map((tab) => sendHomeUpdate(tab.id, current, results)));
 }
 
-chrome.storage.onChanged.addListener((changes, areaName) => {
+PrairieRunExt.addStorageChangedListener((changes, areaName) => {
   const settingChange = changes[SETTINGS_KEY];
   if (areaName !== "local" || !settingChange) return;
   const oldSettings = settingChange.oldValue || {};
