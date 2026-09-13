@@ -1,3 +1,5 @@
+if (!globalThis.PrairieRunOAuthConfig) importScripts("oauth-config.js");
+if (!globalThis.PrairieRunAuthUtils) importScripts("auth-utils.js");
 if (!globalThis.PrairieRunCalendar) importScripts("calendar.js");
 
 const ASSIGNMENTS_KEY = "prairierunAssignments";
@@ -278,6 +280,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: current });
       sendResponse({ ok: true, results, assignments: current });
     }).catch((error) => sendResponse({ ok: false, error: error?.message || "Automatic calendar synchronization failed." }));
+    return true;
+  }
+  if (message?.type === "PRAIRIERUN_AUTH_STATUS") {
+    PrairieRunCalendar.getAuthStatus().then((status) => sendResponse({ ok: true, status })).catch((error) => sendResponse({ ok: false, error: error?.message || "Could not read sign-in status." }));
+    return true;
+  }
+  if (message?.type === "PRAIRIERUN_AUTH_CONNECT") {
+    debugLog("Google Calendar connect requested");
+    PrairieRunCalendar.connectGoogleCalendar().then((status) => sendResponse({ ok: true, status })).catch((error) => sendResponse({ ok: false, error: error?.message || "Google sign-in failed.", code: error?.code }));
+    return true;
+  }
+  if (message?.type === "PRAIRIERUN_AUTH_DISCONNECT") {
+    debugLog("Google Calendar disconnect requested");
+    PrairieRunCalendar.disconnectGoogleCalendar().then((status) => sendResponse({ ok: true, status })).catch((error) => sendResponse({ ok: false, error: error?.message || "Could not sign out." }));
     return true;
   }
   if (message?.type === "PRAIRIERUN_GET_STATE") {

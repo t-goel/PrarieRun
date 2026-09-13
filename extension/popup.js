@@ -3,6 +3,13 @@ const contextElement = document.querySelector("#context");
 const notificationLeadElement = document.querySelector("#notification-lead-hours");
 const completionThresholdElement = document.querySelector("#completion-threshold");
 const resetDataButton = document.querySelector("#reset-data");
+const authStatusElement = document.querySelector("#auth-status");
+const authConnectButton = document.querySelector("#auth-connect");
+const authDisconnectButton = document.querySelector("#auth-disconnect");
+const authErrorElement = document.querySelector("#auth-error");
+const authRedirectElement = document.querySelector("#auth-redirect");
+const authCopyButton = document.querySelector("#auth-copy-redirect");
+let authRedirectUri = "";
 let settings = { notificationLeadMinutes: 240, completionThreshold: 95 };
 
 function showStatus(text, error = false) {
@@ -42,6 +49,44 @@ function sendRuntimeMessage(message, timeoutMs = 10000) {
     }
   });
 }
+function refreshAuthStatus() {
+  if (!authStatusElement) return;
+  sendRuntimeMessage({ type: "PRAIRIERUN_AUTH_STATUS" }).then((response) => {
+    if (!response?.ok) throw new Error(response?.error || "Could not read sign-in status.");
+    renderAuthStatus(response.status);
+  }).catch((error) => {
+    authStatusElement.textContent = "Connection unknown.";
+    showAuthError(error.message, false);
+  });
+}
+function renderAuthStatus(status = {}) {
+  authRedirectUri = status.redirectUri || "";
+  if (authRedirectElement) authRedirectElement.textContent = authRedirectUri;
+  if (!status.clientConfigured) {
+    authStatusElement.textContent = "Not connected.";
+    authConnectButton.hidden = true;
+    authDisconnectButton.hidden = true;
+    showAuthError("The Google OAuth client ID is not configured. See extension/google-calendar-setup.md.", true);
+    return;
+  }
+  if (status.connected) {
+    const expiry = status.expiresAt ? `, expires ${new Date(status.expiresAt).toLocaleString()}` : "";
+    authStatusElement.textContent = `Connected${expiry}.`;
+    authConnectButton.hidden = true;
+    authDisconnectButton.hidden = false;
+    showAuthError("", false);
+  } else {
+    authStatusElement.textContent = "Not connected.";
+    authConnectButton.hidden = false;
+    authDisconnectButton.hidden = true;
+  }
+}
+function showAuthError(text, isError) {
+  if (!authErrorElement) return;
+  authErrorElement.hidden = !text;
+  authErrorElement.textContent = text || "";
+  authErrorElement.classList.toggle("error", Boolean(isError));
+}
 function refreshState() {
   console.log("[PrairieRun] Popup refreshing state");
   sendRuntimeMessage({ type: "PRAIRIERUN_GET_STATE" }).then((response) => {
@@ -70,11 +115,58 @@ scanButton.addEventListener("click", () => {
       if (!response?.ok) showStatus(response?.error || "Scan failed.", true);
       else contextElement.textContent = "PrairieLearn detected.";
       refreshState();
+      refreshAuthStatus();
     }).catch((error) => { scanButton.disabled = false; showStatus(error.message, true); });
   });
 });
 
 refreshState();
+refreshAuthStatus();
+
+authConnectButton.addEventListener("click", () => {
+  authConnectButton.disabled = true;
+  authStatusElement.textContent = "Waiting for Google…";
+  showAuthError("", false);
+  sendRuntimeMessage({ type: "PRAIRIERUN_AUTH_CONNECT" }, 120000).then((response) => {
+    authConnectButton.disabled = false;
+    if (!response?.ok) {
+      const cancelled = response?.code === "cancelled" || /cancel/i.test(response?.error || "");
+      authStatusElement.textContent = "Not connected.";
+      showAuthError(response?.error || "Google sign-in failed.", !cancelled);
+      return;
+    }
+    renderAuthStatus(response.status);
+  }).catch((error) => {
+    authConnectButton.disabled = false;
+    authStatusElement.textContent = "Not connected.";
+    showAuthError(error.message, true);
+  });
+});
+
+authDisconnectButton.addEventListener("click", async () => {
+  authDisconnectButton.disabled = true;
+  try {
+    const response = await sendRuntimeMessage({ type: "PRAIRIERUN_AUTH_DISCONNECT" });
+    if (!response?.ok) throw new Error(response?.error || "Could not sign out.");
+    renderAuthStatus(response.status);
+    showAuthError("Signed out. Google access was revoked.", false);
+  } catch (error) {
+    showAuthError(error.message, true);
+  } finally {
+    authDisconnectButton.disabled = false;
+  }
+});
+
+authCopyButton.addEventListener("click", async () => {
+  if (!authRedirectUri) return;
+  try {
+    await navigator.clipboard.writeText(authRedirectUri);
+    authCopyButton.textContent = "Copied";
+  } catch (_error) {
+    authCopyButton.textContent = "Copy failed";
+  }
+  setTimeout(() => { authCopyButton.textContent = "Copy"; }, 1500);
+});
 
 notificationLeadElement.addEventListener("change", async () => {
   const hours = Number(notificationLeadElement.value);
@@ -106,4 +198,5 @@ resetDataButton.addEventListener("click", async () => {
   resetDataButton.disabled = false;
   applySettings({ notificationLeadMinutes: 240, completionThreshold: 95 });
   showStatus("Test data cleared. Refresh PrairieLearn to scan again.");
+  refreshAuthStatus();
 });

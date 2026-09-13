@@ -28,8 +28,12 @@ Popup -> background.js
 calendar.js -> Google Calendar API
 ```
 
-`extension/background.js` imports `extension/calendar.js`; `calendar.js` is a
+`extension/background.js` imports `extension/oauth-config.js`,
+`extension/auth-utils.js`, then `extension/calendar.js`; `calendar.js` is a
 live dependency even though it is not loaded as a content script.
+`oauth-config.js` holds the one build-time Google OAuth client ID (one-line
+per-project change). `auth-utils.js` is the pure error-classification helper
+(shared by the extension and `stage0/test-auth-errors.js`).
 
 ## Core Behavior Rules
 
@@ -56,6 +60,19 @@ live dependency even though it is not loaded as a content script.
   class/calendar color.
 - Preserve duplicate prevention via stable PrairieRun identifiers in calendar
   event metadata/descriptions.
+- Google sign-in is per-user `launchWebAuthFlow` (implicit flow): the popup and
+  the home-panel footer offer Connect/Disconnect, status shows
+  `Not connected` / `Connected, expires <time>`, and Disconnect revokes at
+  `oauth2.googleapis.com/revoke` and clears the session token.
+- Tokens live only in `chrome.storage.session`/memory; re-prompt only on
+  expiry, revocation, or Disconnect. On Calendar 401, clear the cached token
+  once and retry with a fresh token before failing.
+- `redirect_uri_mismatch` / `invalid_client` / cancellation each produce a
+  distinct human-readable message; the popup has a copy-redirect-URI affordance
+  for registering the install in the GCP OAuth client.
+- Full `calendar` scope is required for per-class calendar creation; Testing
+  mode is dev-only (test users, ~7-day grants) and Production + verification
+  is required before real users.
 
 ## UI Rules
 
@@ -73,7 +90,10 @@ live dependency even though it is not loaded as a content script.
 
 - `extension/background.js`: scanner, state manager, auto-sync coordinator.
 - `extension/calendar.js`: OAuth, calendar creation, duplicate markers, event
-  creation/update, calendar colors.
+  creation/update, calendar colors, token lifecycle (401 retry, revoke).
+- `extension/oauth-config.js`: single build-time OAuth client ID (one-line
+  per-project change; never commit secrets/tokens).
+- `extension/auth-utils.js`: pure auth error classifier (`stage0/test-auth-errors.js` covers it).
 - `extension/home-panel.js` and `extension/home-panel.css`: current embedded UI.
 - `extension/prairielearn-adapter.js`: runtime PrairieLearn parser.
 - `extension/view-utils.js`: shared home-panel helpers; `statusLabel` is live.
