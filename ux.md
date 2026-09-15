@@ -36,6 +36,8 @@ removed.
 - The home-panel Due Date / By Class switch uses compact button-like corners.
   Its active tab moves underneath labels that use blending, so the label
   appearance does not jump independently of the slide animation.
+- The home-panel header uses a concise current-assignment count without
+  repeating the PrairieRun product name.
 - Calendar links, class-specific calendars, completion state, duplicate
   prevention, and the strict-greater-than-95% (not equal to 95%) completion rule
   must not regress.

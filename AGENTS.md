@@ -100,6 +100,8 @@ live dependency even though it is not loaded as a content script.
 - Keep the home-panel view switch compact: use button-like corner rounding and
   let its labels use blend mode over the moving active tab instead of
   synchronizing text colors during the animation.
+- Keep the home-panel header count concise; it should show only the number of
+  current assignments and not repeat the product name.
 
 ## Files To Treat Carefully
 
