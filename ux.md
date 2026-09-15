@@ -34,8 +34,8 @@ removed.
   rules; new or changed assignments remain visible when the product needs the
   user to review them.
 - The home-panel Due Date / By Class switch uses compact button-like corners.
-  Its active tab moves underneath labels that use blending, so the label
-  appearance does not jump independently of the slide animation.
+  Its active tab moves over a blue track, with white text on the track and
+  PrairieLearn-blue text on the white tab.
 - The home-panel header uses a concise current-assignment count without
   repeating the PrairieRun product name.
 - Calendar links, class-specific calendars, completion state, duplicate
