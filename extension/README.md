@@ -61,4 +61,6 @@ submitting to AMO.
 
 The extension is configured for the PrairieRun development OAuth client and requests Calendar access when the first actionable assignment is synchronized. On the first export, Chrome will ask the signed-in Google account for consent. Synchronization creates or reuses a `PrairieLearn — {class}` calendar and stores a private assignment marker plus Google event ID for duplicate-safe updates.
 
-For a different extension ID or a published build, create a matching Chrome Extension OAuth client and update `manifest.json` before loading the extension.
+Use the extension popup (or the Connect button in the PrairieRun panel) to connect or disconnect Google Calendar at any time. Disconnect revokes the token and clears the cached session token.
+
+For a different extension ID or a published build, set the client ID once in `extension/oauth-config.js` (see `extension/google-calendar-setup.md`). Prefer sharing one stable extension ID via manifest `key` pinning so both developers use the same OAuth client.

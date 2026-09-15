@@ -2,7 +2,7 @@
 // calendar module. In Firefox's scripts-array background page (or any context
 // where the manifest already loaded them in order) `importScripts` is either
 // undefined or the modules already exist, so this is a no-op there.
-if (typeof importScripts === "function" && !globalThis.PrairieRunCalendar) importScripts("compat.js", "calendar.js");
+if (typeof importScripts === "function" && !globalThis.PrairieRunCalendar) importScripts("compat.js", "oauth-config.js", "auth-utils.js", "calendar.js");
 
 const ASSIGNMENTS_KEY = "prairierunAssignments";
 const SYNC_KEY = "prairierunSyncStatus";
@@ -278,6 +278,20 @@ PrairieRunExt.addRuntimeMessageListener((message, sender, sendResponse) => {
       await PrairieRunExt.storageLocalSet({ [ASSIGNMENTS_KEY]: current });
       sendResponse({ ok: true, results, assignments: current });
     }).catch((error) => sendResponse({ ok: false, error: error?.message || "Automatic calendar synchronization failed." }));
+    return true;
+  }
+  if (message?.type === "PRAIRIERUN_AUTH_STATUS") {
+    PrairieRunCalendar.getAuthStatus().then((status) => sendResponse({ ok: true, status })).catch((error) => sendResponse({ ok: false, error: error?.message || "Could not read sign-in status." }));
+    return true;
+  }
+  if (message?.type === "PRAIRIERUN_AUTH_CONNECT") {
+    debugLog("Google Calendar connect requested");
+    PrairieRunCalendar.connectGoogleCalendar().then((status) => sendResponse({ ok: true, status })).catch((error) => sendResponse({ ok: false, error: error?.message || "Google sign-in failed.", code: error?.code }));
+    return true;
+  }
+  if (message?.type === "PRAIRIERUN_AUTH_DISCONNECT") {
+    debugLog("Google Calendar disconnect requested");
+    PrairieRunCalendar.disconnectGoogleCalendar().then((status) => sendResponse({ ok: true, status })).catch((error) => sendResponse({ ok: false, error: error?.message || "Could not sign out." }));
     return true;
   }
   if (message?.type === "PRAIRIERUN_GET_STATE") {

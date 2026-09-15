@@ -19,11 +19,20 @@ PrairieLearn page
 Popup ──> background.js
              ├─ scans course assessment tabs
              ├─ stores normalized assignment state
-             ├─ invokes calendar.js
+             ├─ invokes calendar.js (via oauth-config.js + auth-utils.js)
+             ├─ owns Google Connect/Disconnect/status (PRAIRIERUN_AUTH_*)
              └─ notifies the home panel
 
 calendar.js ──> Google Calendar API
 ```
+
+The popup and the home-panel footer are thin auth clients: they send
+`PRAIRIERUN_AUTH_STATUS` / `PRAIRIERUN_AUTH_CONNECT` /
+`PRAIRIERUN_AUTH_DISCONNECT` to the background worker, which delegates to
+`calendar.js`. Tokens live only in `chrome.storage.session`. On Calendar 401
+the cached token is cleared once and the export retried with a fresh token.
+`auth-utils.js` classifies `redirect_uri_mismatch` / `invalid_client` /
+cancelled / expired distinctly (unit-tested in `stage0/test-auth-errors.js`).
 
 The manifest loads the content scripts on PrairieLearn and loads
 `background.js` as the service worker. `background.js` imports `calendar.js`, so

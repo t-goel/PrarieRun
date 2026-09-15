@@ -41,6 +41,10 @@ removed.
 - Calendar links, class-specific calendars, completion state, duplicate
   prevention, and the strict-greater-than-95% (not equal to 95%) completion rule
   must not regress.
+- Google Connect/Disconnect stays understandable: popup card plus a one-line
+  home-panel footer, `Not connected` / `Connected, expires <time>` status,
+  distinct cancellation vs. misconfiguration messages, and a collapsed
+  copy-redirect-URI troubleshooter. No client-ID settings field in the UI.
 
 See `systemdesign.md` for implementation evidence and `AGENTS.md` for current
 agent-facing project rules.

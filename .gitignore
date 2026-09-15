@@ -1,3 +1,6 @@
 prairierun-stage-0-captures-*.json
-
+# Private Chrome extension signing key: the manifest `key` is public and
+# committed, but the .pem that generates it must never be committed.
+extension/key.pem
+*.pem
 dist-firefox/
