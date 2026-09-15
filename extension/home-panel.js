@@ -101,7 +101,7 @@
     built.id = PANEL_ID;
     built.className = "card";
     built.innerHTML = `<div class="card-header bg-primary text-white prr-header">
-      <span>PrairieRun <span class="prr-count"></span></span>
+      <span class="prr-count"></span>
       <div class="prr-header-controls">
         <button type="button" class="btn btn-sm prr-ghost-toggle" id="prr-show-undated">Show undated</button>
         <button type="button" class="prr-view-switch" id="prr-view-toggle" aria-label="Showing assignments by class"><span class="prr-view-switch__tab"></span><span class="prr-view-switch__label prr-view-switch__label--date">Due Date</span><span class="prr-view-switch__label prr-view-switch__label--class">By Class</span></button>

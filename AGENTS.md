@@ -97,6 +97,11 @@ live dependency even though it is not loaded as a content script.
 - Keep PrairieLearn assignment source links working.
 - Preserve compact, scan-friendly UI. Avoid bringing back clutter removed in the
   cleanup pass.
+- Keep the home-panel view switch compact: use button-like corner rounding and
+  keep its blue track, white active tab, and contrasting labels synchronized
+  with the tab animation.
+- Keep the home-panel header count concise; it should show only the number of
+  current assignments and not repeat the product name.
 
 ## Files To Treat Carefully
 
