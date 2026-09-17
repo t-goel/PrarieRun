@@ -1,11 +1,11 @@
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+PrairieRunExt.addRuntimeMessageListener((message, _sender, sendResponse) => {
   console.log("[PrairieRun] Content script received message", message?.type);
   if (message?.type === "PRAIRIERUN_HOME_SCAN_RESULT") {
     window.PrairieRunHomePanel?.update(message.assignments || []);
     return false;
   }
   if (message?.type !== "PRAIRIERUN_READ_PAGE") return undefined;
-  chrome.storage.local.get("prairierunSettings").then((stored) => {
+  PrairieRunExt.storageLocalGet("prairierunSettings").then((stored) => {
     try {
       const adapter = window.PrairieLearnAdapter;
       if (!adapter) throw new Error("PrairieLearn adapter is unavailable on this page.");
@@ -31,5 +31,5 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 if (window.PrairieLearnAdapter?.pageType(location.href, document.title) === "home") {
   console.log("[PrairieRun] PrairieLearn home content script ready", location.href);
   window.PrairieRunHomePanel?.mount();
-  chrome.runtime.sendMessage({ type: "PRAIRIERUN_HOME_READY", url: location.href }).catch(() => undefined);
+  PrairieRunExt.runtimeSendMessage({ type: "PRAIRIERUN_HOME_READY", url: location.href }).catch(() => undefined);
 }

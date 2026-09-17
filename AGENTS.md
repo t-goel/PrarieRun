@@ -31,6 +31,35 @@ calendar.js -> Google Calendar API
 `extension/background.js` imports `extension/calendar.js`; `calendar.js` is a
 live dependency even though it is not loaded as a content script.
 
+## Cross-Browser Support (Chrome/Brave + Firefox 115+)
+
+- One codebase, two generated manifests. `extension/manifest.base.json` is
+  the shared source of truth; `node build-manifest.js --target=chrome`
+  regenerates `extension/manifest.json`, and
+  `node build-manifest.js --target=firefox [--out=dist-firefox]
+  [--gecko-id=...]` emits the Firefox distribution (scripts-array
+  background plus `browser_specific_settings.gecko`). Chrome keeps the
+  single-file `service_worker` background; Firefox uses `scripts`
+  (`service_worker` is only enabled on Firefox 121+, and 115 ESR must work).
+  Minimum Firefox is 115 (`storage.session` floor; the shim falls back to
+  memory without it).
+- `extension/compat.js` loads first in every context (service worker via a
+  guarded `importScripts`, content scripts via manifest order, popup via
+  script-tag order) and exposes `PrairieRunExt`. All runtime code must use
+  `PrairieRunExt` instead of `chrome.*`/`browser.*` directly: Firefox's
+  promise namespace is `browser.*`, and its `chrome.*` mirror is
+  callback-oriented, so raw `chrome.*` promise chains break there.
+- Google access tokens live in `storage.session` with an in-memory
+  browser-session fallback (`PrairieRunExt.get/set/clearSessionValue`) and
+  are never written to `storage.local`.
+- Firefox needs a separate Google OAuth client (its redirect origin differs
+  from Chrome's); see `extension/google-calendar-setup.md`. The client ID
+  default is the Chrome client; a `googleClientId` settings override selects
+  the Firefox client until the settings UI owns this (Plan 2 follow-up).
+- `dist-firefox/` is a generated artifact (gitignored). Firefox dev flow is
+  `about:debugging → This Firefox → Load Temporary Add-on`; real
+  distribution needs AMO signing with a permanent `gecko.id` you own.
+
 ## Core Behavior Rules
 
 - Automatic PrairieLearn scanning and automatic Google Calendar sync are the
@@ -68,12 +97,24 @@ live dependency even though it is not loaded as a content script.
 - Keep PrairieLearn assignment source links working.
 - Preserve compact, scan-friendly UI. Avoid bringing back clutter removed in the
   cleanup pass.
+- Keep the home-panel view switch compact: use button-like corner rounding and
+  keep its blue track, white active tab, and contrasting labels synchronized
+  with the tab animation.
+- Keep the home-panel header count concise; it should show only the number of
+  current assignments and not repeat the product name.
 
 ## Files To Treat Carefully
 
 - `extension/background.js`: scanner, state manager, auto-sync coordinator.
 - `extension/calendar.js`: OAuth, calendar creation, duplicate markers, event
   creation/update, calendar colors.
+- `extension/compat.js`: cross-browser `PrairieRunExt` shim (namespace
+  promises, session-token store). Loads first everywhere; all runtime code
+  must go through it, never `chrome.*`/`browser.*` directly.
+- `extension/manifest.base.json` + `build-manifest.js`: manifest source of
+  truth and per-browser generator. Never hand-edit `extension/manifest.json`
+  or `dist-firefox/manifest.json`; edit the base and rebuild. `dist-firefox/`
+  is gitignored build output.
 - `extension/home-panel.js` and `extension/home-panel.css`: current embedded UI.
 - `extension/prairielearn-adapter.js`: runtime PrairieLearn parser.
 - `extension/view-utils.js`: shared home-panel helpers; `statusLabel` is live.
@@ -107,11 +148,15 @@ For extension changes, run checks proportional to the risk. Common baseline:
 
 ```bash
 node --check extension/*.js stage0/*.js capture-helper/*.js
+node build-manifest.js --target=chrome --check
 node -e "JSON.parse(require('fs').readFileSync('extension/manifest.json', 'utf8')); console.log('manifest ok')"
 node stage0/test-adapter-core.js
 node stage0/test-capture-bundle.js
+node --test stage0/test-firefox-support.js
 ```
 
 When UI or sync behavior changes, also ask the user to reload the unpacked
 extension and verify in Chrome/Brave because this environment cannot fully
-exercise PrairieLearn login state or Google OAuth.
+exercise PrairieLearn login state or Google OAuth. Firefox changes need the
+same manual pass via `about:debugging` temporary load plus the Firefox OAuth
+client in `extension/google-calendar-setup.md`.

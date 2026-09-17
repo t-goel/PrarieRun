@@ -69,7 +69,7 @@
     panel.querySelectorAll("button[data-edit-id]").forEach((button) => button.addEventListener("click", () => editDueDate(button.dataset.editId)));
   }
 
-  async function persist() { await chrome.storage.local.set({ [ASSIGNMENTS_KEY]: assignments }); render(); }
+  async function persist() { await PrairieRunExt.storageLocalSet({ [ASSIGNMENTS_KEY]: assignments }); render(); }
 
   async function editDueDate(id) {
     const item = assignments.find((entry) => entry.id === id); if (!item) return;
@@ -87,7 +87,7 @@
         item.manuallyEnteredDueAt = `${date} ${time}`; item.dueAtLocal = item.manuallyEnteredDueAt; item.syncState = item.syncState === "new" ? "new" : "changed";
       } else if (dialog.returnValue === "remove") { item.manuallyEnteredDueAt = null; item.dueAtLocal = null; }
       dialog.remove();
-      if (dialog.returnValue === "save" || dialog.returnValue === "remove") { await persist(); chrome.runtime.sendMessage({ type: "PRAIRIERUN_ASSIGNMENT_UPDATED", assignment: item }).catch(() => undefined); }
+      if (dialog.returnValue === "save" || dialog.returnValue === "remove") { await persist(); PrairieRunExt.runtimeSendMessage({ type: "PRAIRIERUN_ASSIGNMENT_UPDATED", assignment: item }).catch(() => undefined); }
     });
     dialog.showModal();
   }
@@ -97,15 +97,15 @@
     built.id = PANEL_ID;
     built.className = "card";
     built.innerHTML = `<div class="card-header bg-primary text-white prr-header">
-      <span>PrairieRun <span class="prr-count"></span></span>
+      <span class="prr-count"></span>
       <div class="prr-header-controls">
         <button type="button" class="btn btn-sm prr-ghost-toggle" id="prr-show-undated">Show undated</button>
         <button type="button" class="prr-view-switch" id="prr-view-toggle" aria-label="Showing assignments by class"><span class="prr-view-switch__tab"></span><span class="prr-view-switch__label prr-view-switch__label--date">Due Date</span><span class="prr-view-switch__label prr-view-switch__label--class">By Class</span></button>
       </div>
     </div>
     <ul class="list-group list-group-flush prr-list"></ul>`;
-    built.querySelector("#prr-view-toggle").addEventListener("click", async () => { settings.assignmentView = settings.assignmentView === "ordered" ? "class" : "ordered"; await chrome.storage.local.set({ [SETTINGS_KEY]: settings }); render(); });
-    built.querySelector("#prr-show-undated").addEventListener("click", async () => { settings.showUndatedAssignments = !settings.showUndatedAssignments; await chrome.storage.local.set({ [SETTINGS_KEY]: settings }); render(); });
+    built.querySelector("#prr-view-toggle").addEventListener("click", async () => { settings.assignmentView = settings.assignmentView === "ordered" ? "class" : "ordered"; await PrairieRunExt.storageLocalSet({ [SETTINGS_KEY]: settings }); render(); });
+    built.querySelector("#prr-show-undated").addEventListener("click", async () => { settings.showUndatedAssignments = !settings.showUndatedAssignments; await PrairieRunExt.storageLocalSet({ [SETTINGS_KEY]: settings }); render(); });
     return built;
   }
 
@@ -124,7 +124,7 @@
 
   function mount() {
     if (document.getElementById(PANEL_ID)) return;
-    chrome.storage.local.get([ASSIGNMENTS_KEY, SETTINGS_KEY]).then((stored) => {
+    PrairieRunExt.storageLocalGet([ASSIGNMENTS_KEY, SETTINGS_KEY]).then((stored) => {
       assignments = stored[ASSIGNMENTS_KEY] || [];
       settings = { ...settings, ...(stored[SETTINGS_KEY] || {}) };
       if (placePanel()) return;
@@ -136,7 +136,7 @@
 
   function update(nextAssignments) { assignments = nextAssignments || assignments; if (panel) render(); }
 
-  chrome.storage.onChanged.addListener((changes, areaName) => {
+  PrairieRunExt.addStorageChangedListener((changes, areaName) => {
     if (areaName !== "local") return;
     if (changes[ASSIGNMENTS_KEY]) assignments = changes[ASSIGNMENTS_KEY].newValue || assignments;
     if (changes[SETTINGS_KEY]) settings = { ...settings, ...(changes[SETTINGS_KEY].newValue || {}) };
