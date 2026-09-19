@@ -41,6 +41,9 @@ removed.
 - Calendar links, class-specific calendars, completion state, duplicate
   prevention, and the strict-greater-than-95% (not equal to 95%) completion rule
   must not regress.
+- When a previously synced assignment becomes completed, including after its
+  due date, its existing Calendar event is updated to grey rather than creating
+  a duplicate.
 
 See `systemdesign.md` for implementation evidence and `AGENTS.md` for current
 agent-facing project rules.

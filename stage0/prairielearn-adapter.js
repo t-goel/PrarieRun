@@ -42,7 +42,7 @@ function parsePercentage(value) {
 
 function completionFromScore(score, threshold = 95) {
   if (score == null || Number.isNaN(score)) return "unknown";
-  return score >= threshold ? "completed" : "incomplete";
+  return score > threshold ? "completed" : "incomplete";
 }
 
 function decodeAttributeHtml(value) {

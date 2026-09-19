@@ -30,18 +30,6 @@ function debugLog(message, details) {
 
 debugLog("Background service worker loaded");
 
-function localDateKey(date) {
-  const pad = (value) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function isCurrentAssignment(assignment) {
-  const dueDate = String(assignment?.dueAtLocal || "").match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
-  if (!dueDate) return false;
-  const today = new Date();
-  return dueDate >= localDateKey(today);
-}
-
 async function getSettings() {
   const stored = await PrairieRunExt.storageLocalGet(SETTINGS_KEY);
   return { ...defaultSettings, ...(stored[SETTINGS_KEY] || {}) };
@@ -208,7 +196,7 @@ async function sendHomeUpdate(tabId, assignments, exportResults = []) {
 
 async function notifyHomeTab(tabId, assignments, detectedIds) {
   await sendHomeUpdate(tabId, assignments);
-  const eligible = assignments.filter((item) => detectedIds.has(item.id) && item.dueAtLocal && isCurrentAssignment(item));
+  const eligible = assignments.filter((item) => detectedIds.has(item.id) && item.dueAtLocal);
   if (eligible.length) {
     debugLog("Automatically synchronizing Calendar assignments", { count: eligible.length });
     try {

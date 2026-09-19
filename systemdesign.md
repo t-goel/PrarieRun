@@ -54,6 +54,13 @@ client (different redirect origin); `calendar.js` keeps the Chrome client ID
 as default and honors a `googleClientId` settings override for Firefox.
 `dist-firefox/` is gitignored build output.
 
+Automatic sync eligibility is based on a detected new or materially changed
+assignment with a valid due date; it is not restricted to assignments whose due
+date is today or later. This is required so completion changes on past-due
+assignments can update an existing event's color and reminders. Completion is
+strictly above the configured threshold, so exactly 95% remains incomplete by
+default.
+
 ## Findings
 
 | Item | Evidence | Assessment | Proposed action |
