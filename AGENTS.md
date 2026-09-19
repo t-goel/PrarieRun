@@ -81,8 +81,6 @@ live dependency even though it is not loaded as a content script.
   change by itself.
 - Completion means score is strictly greater than 95 percent. Exactly 95 percent
   is not complete.
-- Completion changes are synchronized even when the assignment is close to or
-  past its due date, so an existing event can be recolored after completion.
 - Completed events should use grey. Incomplete events should retain their
   class/calendar color.
 - Preserve duplicate prevention via stable PrairieRun identifiers in calendar
