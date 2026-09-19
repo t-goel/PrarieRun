@@ -87,8 +87,6 @@ live dependency even though it is not loaded as a content script.
   class/calendar color.
 - Preserve duplicate prevention via stable PrairieRun identifiers in calendar
   event metadata/descriptions.
-- Calendar sync records retain the applied event color so completed events
-  created before color tracking can receive a one-time repair update.
 
 ## UI Rules
 

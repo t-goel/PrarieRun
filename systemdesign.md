@@ -61,10 +61,6 @@ assignments can update an existing event's color and reminders. Completion is
 strictly above the configured threshold, so exactly 95% remains incomplete by
 default.
 
-Each sync record also stores the applied event color. Older completed records
-without that field are treated as a one-time color-repair change, allowing the
-existing marked event to be recolored without creating a duplicate.
-
 ## Findings
 
 | Item | Evidence | Assessment | Proposed action |
