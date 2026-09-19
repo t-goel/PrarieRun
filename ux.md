@@ -44,6 +44,8 @@ removed.
 - When a previously synced assignment becomes completed, including after its
   due date, its existing Calendar event is updated to grey rather than creating
   a duplicate.
+- Completed events from an older sync record are repaired once if their color
+  was not recorded, then remain excluded from unchanged automatic syncs.
 
 See `systemdesign.md` for implementation evidence and `AGENTS.md` for current
 agent-facing project rules.

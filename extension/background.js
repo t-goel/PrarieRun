@@ -65,12 +65,14 @@ async function saveScanResult(assignments) {
   const detectedIds = new Set();
   const merged = assignments.map((item) => {
     const existing = previous.get(item.id);
-    const syncedCompletion = calendarSync[item.id]?.completionStatus;
+    const syncRecord = calendarSync[item.id];
+    const syncedCompletion = syncRecord?.completionStatus;
     const referenceCompletion = syncedCompletion || existing?.completionStatus;
     const completionChanged = Boolean(existing && item.completionStatus && referenceCompletion && referenceCompletion !== item.completionStatus);
+    const completedColorRepairNeeded = Boolean(existing && item.completionStatus === "completed" && syncRecord?.syncStatus === "synced" && !Object.hasOwn(syncRecord, "eventColorId"));
     const incomingFingerprint = JSON.stringify({ title: item.title, dueAtLocal: existing?.manuallyEnteredDueAt || item.dueAtLocal || null, timezone: item.timezone || null });
     const sourceChanged = Boolean(existing && existing.sourceFingerprint !== incomingFingerprint);
-    if (!existing || completionChanged || sourceChanged) detectedIds.add(item.id);
+    if (!existing || completionChanged || completedColorRepairNeeded || sourceChanged) detectedIds.add(item.id);
     return normalizeStoredAssignment(item, existing, now, syncedCompletion);
   });
   const scannedIds = new Set(merged.map((item) => item.id));
