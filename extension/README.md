@@ -5,6 +5,7 @@
 - Scans the logged-in `us.prairielearn.com` home page and discovered course assessment pages.
 - Automatically scans when the logged-in PrairieLearn home page is opened.
 - Automatically synchronizes actionable assignments to Google Calendar after each scan.
+- Reconciles stored assignments with Google Calendar at least once every 24 hours, even when they have not changed.
 - Extracts assignments, course names, scores, source URLs, due timestamps, and time zones.
 - Merges base assessments and numbered assessment instances.
 - Stores assignments locally in Chrome.
@@ -25,8 +26,7 @@
 3. Choose **Load unpacked**.
 4. Select this `extension` directory.
 5. Log in to `https://us.prairielearn.com/`.
-6. Open the extension popup and click **Scan all classes**.
-7. Review the assignment panel below the PrairieLearn course links.
+6. Review the assignment panel below the PrairieLearn course links. Scanning and Calendar synchronization start automatically.
 
 ## Firefox (same codebase, generated manifest)
 

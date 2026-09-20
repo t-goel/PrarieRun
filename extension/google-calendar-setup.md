@@ -19,6 +19,9 @@ Do not commit client secrets or tokens. Chrome extension OAuth uses the public c
 
 PrairieRun caches the temporary Google access token in Chrome's session storage and first attempts silent authorization. You normally should not be prompted on every export. The token expires periodically, so Google may still ask for authorization again after expiration, after clearing extension data, or if Brave blocks the Google sign-in session. In Brave, allow cookies for `accounts.google.com` and `googleapis.com` if prompts recur.
 
+Brave uses the Chrome OAuth client. It must not be routed through the
+Firefox-only `googleClientId` path; that path is only for Firefox builds.
+
 ## Firefox OAuth setup
 
 Firefox cannot reuse the Chrome-extension-type OAuth client: its redirect

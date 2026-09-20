@@ -8,9 +8,13 @@ const ASSIGNMENTS_KEY = "prairierunAssignments";
 const SYNC_KEY = "prairierunSyncStatus";
 const SETTINGS_KEY = "prairierunSettings";
 const BACKGROUND_CALENDAR_SYNC_KEY = "prairierunCalendarSync";
+const DAILY_CALENDAR_SYNC_KEY = "prairierunLastDailyCalendarSync";
+const DAILY_CALENDAR_SYNC_ALARM = "prairierun-daily-calendar-sync";
+const DAILY_CALENDAR_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const DEBUG_LOG_KEY = "prairierunDebugLog";
 const defaultSettings = { prairieLearnOrigin: "https://us.prairielearn.com", completionThreshold: 95, defaultReminderMinutes: 10, notificationLeadMinutes: 240, showUndatedAssignments: false, assignmentView: "class" };
 let scanInFlight = false;
+let dailySyncInFlight = false;
 let queuedScan = false;
 let queuedScanTabId = null;
 const debugEntries = [];
@@ -208,13 +212,18 @@ async function sendHomeUpdate(tabId, assignments, exportResults = []) {
 
 async function notifyHomeTab(tabId, assignments, detectedIds) {
   await sendHomeUpdate(tabId, assignments);
-  const eligible = assignments.filter((item) => detectedIds.has(item.id) && item.dueAtLocal && isCurrentAssignment(item));
+  const stored = await PrairieRunExt.storageLocalGet(DAILY_CALENDAR_SYNC_KEY);
+  const lastDailySync = Number(stored[DAILY_CALENDAR_SYNC_KEY]) || 0;
+  const dailySyncDue = !lastDailySync || Date.now() - lastDailySync >= DAILY_CALENDAR_SYNC_INTERVAL_MS;
+  const eligible = assignments.filter((item) => (dailySyncDue || detectedIds.has(item.id)) && item.dueAtLocal && item.syncState !== "stale" && (dailySyncDue || isCurrentAssignment(item)));
   if (eligible.length) {
-    debugLog("Automatically synchronizing Calendar assignments", { count: eligible.length });
+    debugLog(dailySyncDue ? "Running daily Calendar synchronization" : "Automatically synchronizing Calendar assignments", { count: eligible.length });
     try {
       const exportResults = await PrairieRunCalendar.exportAssignments(eligible);
       applyExportResults(exportResults, assignments);
-      await PrairieRunExt.storageLocalSet({ [ASSIGNMENTS_KEY]: assignments });
+      const updates = { [ASSIGNMENTS_KEY]: assignments };
+      if (dailySyncDue) updates[DAILY_CALENDAR_SYNC_KEY] = Date.now();
+      await PrairieRunExt.storageLocalSet(updates);
       await sendHomeUpdate(tabId, assignments, exportResults);
     } catch (error) {
       debugLog("Automatic Calendar synchronization failed", { error: error.message });
@@ -255,11 +264,6 @@ async function runScan(sourceTabId) {
 }
 
 PrairieRunExt.addRuntimeMessageListener((message, sender, sendResponse) => {
-  if (message?.type === "PRAIRIERUN_START_SCAN") {
-    debugLog("Popup requested scan", { tabId: message.tabId || sender.tab?.id });
-    runScan(message.tabId || sender.tab?.id).then((result) => sendResponse({ ok: true, count: result.assignments.length })).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); sendResponse({ ok: false, error: error.message }); });
-    return true;
-  }
   if (message?.type === "PRAIRIERUN_HOME_READY" && sender.tab?.id) {
     debugLog("PrairieLearn home reported ready", { tabId: sender.tab.id });
     runScan(sender.tab.id).catch(async (error) => { await setSyncStatus({ state: "error", current: error.message }); });
@@ -304,9 +308,26 @@ async function resyncStoredAssignments() {
   applyExportResults(results, assignments);
   const current = stored[ASSIGNMENTS_KEY] || [];
   applyExportResults(results, current);
-  await PrairieRunExt.storageLocalSet({ [ASSIGNMENTS_KEY]: current });
+  await PrairieRunExt.storageLocalSet({ [ASSIGNMENTS_KEY]: current, [DAILY_CALENDAR_SYNC_KEY]: Date.now() });
   const tabs = await PrairieRunExt.tabsQuery({ url: "https://us.prairielearn.com/*" });
   await Promise.all(tabs.filter((tab) => tab.id).map((tab) => sendHomeUpdate(tab.id, current, results)));
+}
+
+async function runDailyCalendarSync() {
+  if (dailySyncInFlight) return;
+  dailySyncInFlight = true;
+  try {
+    const stored = await PrairieRunExt.storageLocalGet(ASSIGNMENTS_KEY);
+    const assignments = (stored[ASSIGNMENTS_KEY] || []).filter((item) => item.dueAtLocal && item.syncState !== "stale");
+    if (!assignments.length) return;
+    debugLog("Running scheduled daily Calendar synchronization", { count: assignments.length });
+    await resyncStoredAssignments();
+  } catch (error) {
+    debugLog("Scheduled daily Calendar synchronization failed", { error: error.message });
+    await setSyncStatus({ state: "error", current: error.message });
+  } finally {
+    dailySyncInFlight = false;
+  }
 }
 
 PrairieRunExt.addStorageChangedListener((changes, areaName) => {
@@ -321,3 +342,8 @@ PrairieRunExt.addStorageChangedListener((changes, areaName) => {
     resyncStoredAssignments().catch((error) => debugLog("Could not resynchronize Calendar reminders", { error: error.message }));
   }
 });
+
+PrairieRunExt.addAlarmsListener?.((alarm) => {
+  if (alarm?.name === DAILY_CALENDAR_SYNC_ALARM) runDailyCalendarSync().catch((error) => debugLog("Daily Calendar alarm failed", { error: error.message }));
+});
+PrairieRunExt.alarmsCreate?.(DAILY_CALENDAR_SYNC_ALARM, { delayInMinutes: 24 * 60, periodInMinutes: 24 * 60 }).catch((error) => debugLog("Could not schedule daily Calendar synchronization", { error: error.message }));

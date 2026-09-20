@@ -1,4 +1,3 @@
-const scanButton = document.querySelector("#scan");
 const contextElement = document.querySelector("#context");
 const notificationLeadElement = document.querySelector("#notification-lead-hours");
 const completionThresholdElement = document.querySelector("#completion-threshold");
@@ -43,17 +42,6 @@ function monitorRefresh(attempt = 0) {
 PrairieRunExt.tabsQuery({ active: true, currentWindow: true }).then(([tab]) => {
   contextElement.textContent = tab?.url?.startsWith("https://us.prairielearn.com/") ? "PrairieLearn detected." : "Open us.prairielearn.com to scan assignments.";
 }).catch(() => undefined);
-
-scanButton.addEventListener("click", () => {
-  console.log("[PrairieRun] Popup scan button clicked");
-  scanButton.disabled = true; showStatus("Starting scan…");
-  PrairieRunExt.tabsQuery({ active: true, currentWindow: true }).then(([tab]) => sendRuntimeMessage({ type: "PRAIRIERUN_START_SCAN", tabId: tab?.id }, 45000)).then((response) => {
-      scanButton.disabled = false;
-      if (!response?.ok) showStatus(response?.error || "Scan failed.", true);
-      else contextElement.textContent = "PrairieLearn detected.";
-      refreshState();
-    }).catch((error) => { scanButton.disabled = false; showStatus(error.message, true); });
-});
 
 refreshState();
 

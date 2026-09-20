@@ -37,3 +37,25 @@ test("base labels and instance titles normalize to one assignment key", () => {
   assert.equal(adapter.normalizeInstanceTitle("The Relational Model instance #1"), "The Relational Model");
   assert.equal(adapter.stableAssignmentKey({ courseInstanceId: "229304", assessmentId: "2724861" }), "pl:229304:assessment:2724861");
 });
+
+test("completed originals keep their deadline instead of a later extension deadline", () => {
+  const base = {
+    sourceUrl: "https://us.prairielearn.com/pl/course_instance/229304/assessment/2724861/",
+    score: 100,
+    completionStatus: "completed",
+    dueAtLocal: "2026-09-10 23:59:00",
+    dueText: "23:59, Thu, Sep 10",
+    timezone: "CDT",
+    rawDueText: "until 23:59, Thu, Sep 10",
+  };
+  const extension = {
+    sourceUrl: "https://us.prairielearn.com/pl/course_instance/229304/assessment_instance/14526257/",
+    score: 80,
+    completionStatus: "incomplete",
+    dueAtLocal: "2026-09-20 23:59:00",
+    dueText: "23:59, Sun, Sep 20",
+    timezone: "CDT",
+    rawDueText: "until 23:59, Sun, Sep 20",
+  };
+  assert.deepEqual(adapter.resolveAssessmentData(extension, base), base);
+});

@@ -17,16 +17,17 @@
 (function () {
   if (globalThis.PrairieRunExt) return;
 
-  const ext = globalThis.browser ?? globalThis.chrome;
-  const usePromiseNamespace = Boolean(globalThis.browser);
-  const isFirefox = usePromiseNamespace
-    || (typeof navigator !== "undefined" && navigator.userAgent.includes("Firefox"));
+  // Brave can expose a `browser` namespace too, so namespace presence alone
+  // is not enough to identify Firefox. The browser identity determines both
+  // the API preference and which Google OAuth client is valid.
+  const isFirefox = typeof navigator !== "undefined" && /Firefox/i.test(navigator.userAgent || "");
+  const ext = isFirefox ? (globalThis.browser ?? globalThis.chrome) : (globalThis.chrome ?? globalThis.browser);
 
   // Call an extension API exactly once and always get a promise back.
   // Firefox's `browser.*` namespace returns native promises; Chrome/Brave's
   // MV3 `chrome.*` namespace does the same when no callback is passed.
   // (Firefox's callback-oriented `chrome.*` mirror is never used because
-  // `browser` takes precedence above.) Rejections already carry the real
+  // Firefox is identified from its user agent and prefers `browser`.) Rejections already carry the real
   // error, so callers can rely on `await` / `.catch` in both browsers.
   function callAsync(api, method, ...args) {
     try {
@@ -118,6 +119,8 @@
     identityLaunchWebAuthFlow: (details) => callAsync(ext.identity, "launchWebAuthFlow", details),
     addRuntimeMessageListener: (listener) => ext.runtime.onMessage.addListener(listener),
     addStorageChangedListener: (listener) => ext.storage.onChanged.addListener(listener),
+    alarmsCreate: (name, info) => ext.alarms ? callAsync(ext.alarms, "create", name, info) : Promise.reject(new Error("Extension alarms API is unavailable.")),
+    addAlarmsListener: (listener) => ext.alarms?.onAlarm?.addListener(listener),
     addTabsUpdatedListener: (listener) => ext.tabs.onUpdated.addListener(listener),
     removeTabsUpdatedListener: (listener) => ext.tabs.onUpdated.removeListener(listener),
   };

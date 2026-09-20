@@ -88,6 +88,12 @@ test("compat shim works under the Chrome chrome.* namespace", async () => {
   assert.deepEqual((await ext.tabsGet(3)).status, "complete");
 });
 
+test("Brave-like user agents do not select Firefox OAuth behavior", () => {
+  const ns = firefoxNamespace();
+  const ext = runCompatWith(ns, { exposeAs: "browser", userAgent: "Mozilla/5.0 Chrome/120.0 Safari/537.36" });
+  assert.equal(ext.isFirefox, false);
+});
+
 test("session tokens fall back to memory and never touch local storage", async () => {
   const ns = firefoxNamespace({ session: false });
   const ext = runCompatWith(ns, { exposeAs: "browser", userAgent: "Firefox/121.0" });

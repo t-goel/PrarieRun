@@ -178,6 +178,7 @@ function extractAssignments(document, location = window.location, threshold = 95
     .filter((item) => !(item.assessmentId && instanceLabels.has(item.baseLabel)))
     .map((item) => {
       const base = baseRows.get(item.baseLabel);
+      const resolved = resolveAssessmentData(item, base);
       const assessmentId = item.assessmentId || base?.assessmentId || null;
       return {
         id: stableAssignmentKey({
@@ -189,17 +190,41 @@ function extractAssignments(document, location = window.location, threshold = 95
         courseName: course.courseName,
         title: base?.title || item.title,
         label: item.baseLabel || base?.baseLabel,
-        sourceUrl: item.sourceUrl,
+        sourceUrl: resolved.sourceUrl,
         assessmentId,
         instanceId: item.instanceId,
-        score: item.score,
-        completionStatus: item.completionStatus,
-        dueAtLocal: item.dueAtLocal || base?.dueAtLocal || null,
-        dueText: item.dueText || base?.dueText || null,
-        timezone: item.timezone || base?.timezone || null,
-        rawDueText: item.rawDueText || base?.rawDueText || null,
+        score: resolved.score,
+        completionStatus: resolved.completionStatus,
+        dueAtLocal: resolved.dueAtLocal,
+        dueText: resolved.dueText,
+        timezone: resolved.timezone,
+        rawDueText: resolved.rawDueText,
       };
     });
+}
+
+function resolveAssessmentData(item, base) {
+  const baseCompleted = base?.completionStatus === "completed";
+  if (baseCompleted) {
+    return {
+      sourceUrl: base.sourceUrl || item.sourceUrl,
+      score: base.score,
+      completionStatus: base.completionStatus,
+      dueAtLocal: base.dueAtLocal || null,
+      dueText: base.dueText || null,
+      timezone: base.timezone || null,
+      rawDueText: base.rawDueText || null,
+    };
+  }
+  return {
+    sourceUrl: item.sourceUrl,
+    score: item.score,
+    completionStatus: item.completionStatus,
+    dueAtLocal: item.dueAtLocal || base?.dueAtLocal || null,
+    dueText: item.dueText || base?.dueText || null,
+    timezone: item.timezone || base?.timezone || null,
+    rawDueText: item.rawDueText || base?.rawDueText || null,
+  };
 }
 
 function extractAssignmentDetail(document, location = window.location, threshold = 95) {
@@ -242,6 +267,7 @@ const api = {
   parseDueInfo,
   parsePercentage,
   pathParts,
+  resolveAssessmentData,
   stableAssignmentKey,
 };
 

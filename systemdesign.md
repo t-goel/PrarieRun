@@ -20,6 +20,7 @@ Popup ──> background.js
              ├─ scans course assessment tabs
              ├─ stores normalized assignment state
              ├─ invokes calendar.js
+             ├─ schedules 24-hour Calendar reconciliation
              └─ notifies the home panel
 
 calendar.js ──> Google Calendar API
@@ -29,6 +30,19 @@ The manifest loads the content scripts on PrairieLearn and loads
 `background.js` as the service worker. `background.js` imports `calendar.js`, so
 the calendar module is a live dependency even though it is not listed in the
 manifest's content-script array.
+
+The popup is status/settings-only. PrairieLearn scanning begins from the home
+page automatically, and a named extension alarm runs a full Calendar
+reconciliation at least once per 24-hour interval. The daily reconciliation
+includes stored assignments with due dates even when their normalized data is
+unchanged. Calendar export falls back to finding or recreating a class calendar
+when its locally stored Google Calendar ID no longer exists.
+
+When PrairieLearn exposes both a base assessment and a numbered extension for
+the same assessment set, a completed base assessment takes precedence for the
+normalized assignment's score, completion state, source link, and due date.
+This prevents an extension deadline from creating a later Calendar event for
+work that was already completed before the extension.
 
 ## Cross-browser support (Chrome/Brave + Firefox 115+)
 
@@ -43,6 +57,10 @@ directory whose manifest swaps in a `scripts`-array background (`compat.js`,
 Firefox only enables `service_worker` on 121+; the `typeof importScripts ===
 "function"` guard at the top of `background.js` loads the modules only when
 the manifest has not already done so.
+
+The compatibility shim identifies Firefox from the user agent rather than from
+the presence of a `browser` namespace. This matters for Brave, which can expose
+that namespace while still requiring the Chrome extension OAuth client.
 
 `extension/compat.js` is the only module that touches `browser.*` /
 `chrome.*` directly. It loads first in every context and exposes

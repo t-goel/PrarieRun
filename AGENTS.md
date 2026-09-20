@@ -46,9 +46,9 @@ live dependency even though it is not loaded as a content script.
 - `extension/compat.js` loads first in every context (service worker via a
   guarded `importScripts`, content scripts via manifest order, popup via
   script-tag order) and exposes `PrairieRunExt`. All runtime code must use
-  `PrairieRunExt` instead of `chrome.*`/`browser.*` directly: Firefox's
-  promise namespace is `browser.*`, and its `chrome.*` mirror is
-  callback-oriented, so raw `chrome.*` promise chains break there.
+  `PrairieRunExt` instead of `chrome.*`/`browser.*` directly. Firefox is
+  identified from its user agent because Brave may also expose a `browser`
+  namespace; Brave must continue using the Chrome OAuth client.
 - Google access tokens live in `storage.session` with an in-memory
   browser-session fallback (`PrairieRunExt.get/set/clearSessionValue`) and
   are never written to `storage.local`.
@@ -64,6 +64,10 @@ live dependency even though it is not loaded as a content script.
 
 - Automatic PrairieLearn scanning and automatic Google Calendar sync are the
   default behavior.
+- Do not add a manual scan button to the popup; opening or refreshing the
+  PrairieLearn home page starts scanning automatically.
+- Calendar reconciliation runs on the first successful scan and then at least
+  once every 24 hours, including assignments that have not changed.
 - The embedded home panel should stay directly below the PrairieLearn course
   links.
 - Do not reintroduce the removed standalone staging page unless explicitly
@@ -85,6 +89,11 @@ live dependency even though it is not loaded as a content script.
   class/calendar color.
 - Preserve duplicate prevention via stable PrairieRun identifiers in calendar
   event metadata/descriptions.
+- If a user deletes a mapped class calendar in Google Calendar, the next
+  eligible synchronization must recreate or reuse the class calendar instead
+  of failing on the stale local calendar ID.
+- When an original assessment is completed, a later numbered extension must not
+  replace its completed state or original due date for Calendar scheduling.
 
 ## UI Rules
 

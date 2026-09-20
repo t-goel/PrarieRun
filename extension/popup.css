@@ -8,7 +8,6 @@ h1 { margin: 0 0 8px; font-size: 22px; letter-spacing: -.02em; }
 .small { margin: 13px 0 0; font-size: 11px; }
 button { width: 100%; border-radius: 8px; padding: 10px 12px; font: inherit; font-weight: 700; cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .5; }
-.primary { border: 0; background: #0065bd; color: #fff; }
 .secondary { border: 1px solid #c8d0d9; background: #fff; color: #243444; }
 .secondary { margin-top: 8px; color: #405263; }
 .muted.error { color: #a32929; }

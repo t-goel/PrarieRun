@@ -161,7 +161,8 @@ async function exportAssignments(assignments) {
     if (!assignment.dueAtLocal) { results.push({ assignment, status: "skipped", reason: "Missing due date" }); continue; }
     try {
       const courseKey = assignment.courseInstanceId || assignment.courseName;
-      const calendar = mappings[courseKey] ? calendars.find((item) => item.id === mappings[courseKey]) : await getOrCreateClassCalendar(assignment.courseName, calendars, token);
+      const mappedCalendar = mappings[courseKey] ? calendars.find((item) => item.id === mappings[courseKey]) : null;
+      const calendar = mappedCalendar || await getOrCreateClassCalendar(assignment.courseName, calendars, token);
       if (!calendar) throw new Error(`Could not find a calendar for ${assignment.courseName}.`);
       mappings[courseKey] = calendar.id;
       const classColorId = colorPlan.classColors[courseKey];

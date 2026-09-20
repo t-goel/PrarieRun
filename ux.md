@@ -28,6 +28,10 @@ removed.
 
 - The home panel remains directly below PrairieLearn's course links.
 - Automatic scanning and automatic calendar synchronization remain the default.
+- The extension popup does not offer a manual scan action. Opening or
+  refreshing the PrairieLearn home page starts the scan automatically.
+- Calendar synchronization runs after the first successful scan and is also
+  reconciled at least once every 24 hours, even when assignments are unchanged.
 - Assignments without due dates remain hidden by default and can be revealed or
   edited through the existing undated-assignment control.
 - Existing synced assignments remain collapsed according to the current panel
@@ -41,6 +45,8 @@ removed.
 - Calendar links, class-specific calendars, completion state, duplicate
   prevention, and the strict-greater-than-95% (not equal to 95%) completion rule
   must not regress.
+- If an assignment was already completed before a late extension was added,
+  the extension deadline is not shown or scheduled as new work.
 
 See `systemdesign.md` for implementation evidence and `AGENTS.md` for current
 agent-facing project rules.
@@ -65,8 +71,7 @@ When the active tab is a supported PrairieLearn page, the popup shows:
 - Connection status: “PrairieLearn detected” or “Log in to PrairieLearn”
 - Last scan time
 - Number of staged assignments
-- Primary button: **Scan all classes**
-- Secondary button: **Open staging area**
+- Automatic scan and Calendar synchronization status
 - Small link: **Settings**
 
 If the user is on another site, show: “Open PrairieLearn to scan assignments,” with an **Open PrairieLearn** action if a configured URL exists.
